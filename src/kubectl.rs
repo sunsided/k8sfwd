@@ -1,11 +1,9 @@
 use crate::portfwd::PortForwardConfig;
 use serde::Deserialize;
-use std::any::type_name;
 use std::env::current_dir;
 use std::io::{BufRead, Read};
-use std::os::linux::raw::stat;
 use std::path::PathBuf;
-use std::process::{ChildStdout, Command, Stdio};
+use std::process::{Command, Stdio};
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
 use std::thread::JoinHandle;
@@ -111,13 +109,14 @@ impl Kubectl {
 
             // Wait for the child process to finish
             let status = child.wait().expect("Failed to wait for child process");
-            status_tx
-                .send(status)
-                .expect("Failed to send process status");
 
             if !status.success() {
                 todo!("restart the forwarding")
             }
+
+            status_tx
+                .send(status)
+                .expect("Failed to send process status");
 
             println!("{display_name}: Process exited with status: {}", status);
 

@@ -1,6 +1,7 @@
 use crate::kubectl::Kubectl;
 use crate::portfwd::PortForwardConfigs;
 use anyhow::Result;
+use semver::Version;
 use std::fs::File;
 use std::io::Read;
 use std::process::ExitCode;
@@ -9,6 +10,9 @@ mod kubectl;
 mod portfwd;
 
 fn main() -> Result<ExitCode> {
+    let lowest_supported_version = Version::new(0, 1, 0);
+    let highest_supported_version = lowest_supported_version.clone();
+
     dotenvy::dotenv().ok();
 
     // TODO: Allow to specify a configuration as a command-line argument.
@@ -19,7 +23,15 @@ fn main() -> Result<ExitCode> {
     file.read_to_string(&mut contents)?;
 
     let configs: PortForwardConfigs = serde_yaml::from_str(&contents)?;
-    println!("Config: {configs:?}");
+
+    #[allow(clippy::absurd_extreme_comparisons)]
+    if configs.version < lowest_supported_version || configs.version > highest_supported_version {
+        eprintln!(
+            "Configuration version {loaded} is not supported by this application",
+            loaded = configs.version
+        );
+        return exitcode(exitcode::CONFIG);
+    }
 
     // TODO: If no config exists, exit.
 

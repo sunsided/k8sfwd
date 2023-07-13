@@ -6,6 +6,7 @@ at the same time.
 
 ```yaml
 ---
+version: 0.1.0
 targets:
   - name: Test API (Staging)
     target: foo

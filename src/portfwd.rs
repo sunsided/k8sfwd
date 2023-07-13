@@ -2,8 +2,7 @@ use serde::{Deserialize, Deserializer};
 
 #[derive(Debug, Deserialize)]
 pub struct PortForwardConfigs {
-    #[serde(default)]
-    pub version: u32,
+    pub version: semver::Version,
     pub targets: Vec<PortForwardConfig>,
 }
 
@@ -269,6 +268,7 @@ mod tests {
     #[test]
     fn test_entire_config() {
         let config = r#"
+            version: 0.1.0
             targets:
               - name: Test API (Staging)
                 target: foo
