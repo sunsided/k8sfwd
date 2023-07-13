@@ -1,0 +1,16 @@
+[package]
+name = "k8sfwd"
+version = "0.1.0"
+description = "A Kubernetes port-forwarding utility for managing multiple targets"
+authors = ["Markus Mayer"]
+license = "EUPL-1.2"
+edition = "2021"
+
+[dependencies]
+anyhow = "1.0.71"
+dotenvy = "0.15.7"
+exitcode = "1.1.2"
+serde = { version = "1.0.171", features = ["derive"] }
+serde_json = "1.0.102"
+serde_yaml = "0.9.22"
+thiserror = "1.0.43"
