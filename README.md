@@ -14,8 +14,6 @@ targets:
     namespace: bar
     context: null
     cluster: null
-    listen_addrs:
-      - "127.0.0.1"
     ports:
       - "5012:80"
       - "8080"
