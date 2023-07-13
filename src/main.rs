@@ -16,6 +16,7 @@ fn main() -> Result<ExitCode> {
     dotenvy::dotenv().ok();
 
     // TODO: Allow to specify a configuration as a command-line argument.
+    // TODO: Watch the configuration file, stop missing bits and start new ones. (Hash the entries?)
 
     // TODO: Attempt to find the configuration file in parent directories.
     let mut file = File::open(".k8sfwd")?;

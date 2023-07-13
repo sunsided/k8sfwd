@@ -107,8 +107,14 @@ impl Kubectl {
             Self::handle_pipe(stdout_tx, child.stdout.take());
             Self::handle_pipe(stderr_tx, child.stderr.take());
 
+            let status = match child.try_wait() {
+                Ok(Some(status)) => todo!("Failed on startup"),
+                Ok(None) => child.wait(),
+                Err(e) => todo!("Failed to wait for result"),
+            };
+
             // Wait for the child process to finish
-            let status = child.wait().expect("Failed to wait for child process");
+            let status = status.expect("Failed to wait for child process");
 
             if !status.success() {
                 todo!("restart the forwarding")
