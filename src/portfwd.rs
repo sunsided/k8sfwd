@@ -1,8 +1,18 @@
+use lazy_static::lazy_static;
+use semver::Version;
 use serde::{Deserialize, Deserializer};
+use std::fs::File;
+use std::io;
+use std::io::Read;
+
+lazy_static! {
+    pub static ref LOWEST_SUPPORTED_VERSION: Version = Version::new(0, 1, 0);
+    pub static ref HIGHEST_SUPPORTED_VERSION: Version = Version::new(0, 1, 0);
+}
 
 #[derive(Debug, Deserialize)]
 pub struct PortForwardConfigs {
-    pub version: semver::Version,
+    pub version: Version,
     pub targets: Vec<PortForwardConfig>,
 }
 
@@ -75,6 +85,17 @@ impl IntoIterator for PortForwardConfigs {
 
     fn into_iter(self) -> Self::IntoIter {
         self.targets.into_iter()
+    }
+}
+
+impl PortForwardConfigs {
+    pub fn is_supported_version(&self) -> bool {
+        #[allow(clippy::absurd_extreme_comparisons)]
+        if self.version < *LOWEST_SUPPORTED_VERSION || self.version > *HIGHEST_SUPPORTED_VERSION {
+            false
+        } else {
+            true
+        }
     }
 }
 
@@ -204,6 +225,26 @@ impl<'de> Deserialize<'de> for Port {
 
         deserializer.deserialize_any(PortVisitor)
     }
+}
+
+pub trait FromYaml {
+    fn into_configuration(self) -> Result<PortForwardConfigs, FromYamlError>;
+}
+
+impl FromYaml for File {
+    fn into_configuration(mut self) -> Result<PortForwardConfigs, FromYamlError> {
+        let mut contents = String::new();
+        self.read_to_string(&mut contents)?;
+        Ok(serde_yaml::from_str(&contents)?)
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum FromYamlError {
+    #[error(transparent)]
+    InvalidConfiguration(#[from] serde_yaml::Error),
+    #[error(transparent)]
+    FileReadFailed(#[from] io::Error),
 }
 
 #[cfg(test)]

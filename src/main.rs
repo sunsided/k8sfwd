@@ -1,9 +1,8 @@
 use crate::cli::Cli;
 use crate::kubectl::Kubectl;
-use crate::portfwd::PortForwardConfigs;
+use crate::portfwd::{FromYaml, FromYamlError, PortForwardConfigs};
 use anyhow::Result;
 use clap::Parser;
-use semver::Version;
 use std::fs::File;
 use std::io::Read;
 use std::path::PathBuf;
@@ -25,9 +24,6 @@ static BANNER: &'static str = indoc::indoc!(
 );
 
 fn main() -> Result<ExitCode> {
-    let lowest_supported_version = Version::new(0, 1, 0);
-    let highest_supported_version = lowest_supported_version.clone();
-
     dotenvy::dotenv().ok();
     let cli = Cli::parse();
 
@@ -52,7 +48,7 @@ fn main() -> Result<ExitCode> {
     // TODO: Add home directory config. See "home" crate. Allow merging of configuration.
 
     // Attempt to find the configuration file in parent directories.
-    let (path, mut file) = match cli.config {
+    let (path, file) = match cli.config {
         None => find_config_file()?,
         Some(file) => (file.clone(), File::open(file)?),
     };
@@ -60,21 +56,27 @@ fn main() -> Result<ExitCode> {
     println!("Using config from {path}", path = path.display());
     println!();
 
-    let mut contents = String::new();
-    file.read_to_string(&mut contents)?;
+    // Ensure configuration can be loaded.
+    let configs = match file.into_configuration() {
+        Ok(configs) => configs,
+        Err(FromYamlError::InvalidConfiguration(e)) => {
+            eprintln!("Invalid configuration: {e}");
+            return exitcode(exitcode::CONFIG);
+        }
+        Err(FromYamlError::FileReadFailed(e)) => {
+            eprintln!("Failed to read configuration file: {e}");
+            return exitcode(exitcode::UNAVAILABLE);
+        }
+    };
 
-    let configs: PortForwardConfigs = serde_yaml::from_str(&contents)?;
-
-    #[allow(clippy::absurd_extreme_comparisons)]
-    if configs.version < lowest_supported_version || configs.version > highest_supported_version {
+    // Ensure version is supported.
+    if !configs.is_supported_version() {
         eprintln!(
             "Configuration version {loaded} is not supported by this application",
             loaded = configs.version
         );
         return exitcode(exitcode::CONFIG);
     }
-
-    // TODO: If no config exists, exit.
 
     // For each configuration, attempt a port-forward.
     let mut handles = Vec::new();

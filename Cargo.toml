@@ -12,6 +12,7 @@ clap = { version = "4.3.12", features = ["derive", "env"] }
 dotenvy = "0.15.7"
 exitcode = "1.1.2"
 indoc = "2.0.2"
+lazy_static = "1.4.0"
 pathdiff = "0.2.1"
 semver = { version = "1.0.17", features = ["serde"] }
 serde = { version = "1.0.171", features = ["derive"] }
