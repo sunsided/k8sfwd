@@ -7,18 +7,18 @@ use std::process::{Command, Stdio};
 use std::sync::mpsc;
 use std::sync::mpsc::Sender;
 use std::thread::JoinHandle;
-use std::{env, io, thread};
+use std::{io, thread};
 
 #[derive(Debug)]
 pub struct Kubectl {
-    kubectl: String,
+    kubectl: PathBuf,
     current_dir: PathBuf,
 }
 
 impl Kubectl {
-    pub fn new() -> Result<Self, ShellError> {
+    pub fn new(kubectl: PathBuf) -> Result<Self, ShellError> {
         Ok(Self {
-            kubectl: env::var("KUBECTL_PATH").unwrap_or("kubectl".to_string()),
+            kubectl,
             current_dir: current_dir()?,
         })
     }
