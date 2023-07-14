@@ -96,16 +96,15 @@ impl Kubectl {
         // TODO: Handle invalid port configurations
 
         // Create channels for communication
-        let (stdout_tx, stdout_rx) = mpsc::channel();
-        let (stderr_tx, stderr_rx) = mpsc::channel();
+        let (out_tx, out_rx) = mpsc::channel();
         let (status_tx, status_rx) = mpsc::channel();
 
         let child_thread = thread::spawn(move || {
             let mut child = command.spawn()?;
 
             // Read stdout and stderr in separate threads.
-            Self::handle_pipe(stdout_tx, child.stdout.take());
-            Self::handle_pipe(stderr_tx, child.stderr.take());
+            Self::handle_pipe(out_tx.clone(), child.stdout.take(), StreamSource::StdOut);
+            Self::handle_pipe(out_tx, child.stderr.take(), StreamSource::StdErr);
 
             let status = match child.try_wait() {
                 Ok(Some(status)) => todo!("Failed on startup"),
@@ -132,7 +131,11 @@ impl Kubectl {
         Ok(child_thread)
     }
 
-    fn handle_pipe<T: Read + Send + 'static>(stdout_tx: Sender<String>, pipe: Option<T>) {
+    fn handle_pipe<T: Read + Send + 'static>(
+        out_tx: Sender<(StreamSource, String)>,
+        pipe: Option<T>,
+        source: StreamSource,
+    ) {
         if let Some(pipe) = pipe {
             thread::spawn(move || {
                 let reader = io::BufReader::new(pipe);
@@ -141,11 +144,18 @@ impl Kubectl {
                         break;
                     }
 
-                    stdout_tx.send(line.unwrap()).ok();
+                    let line = line.unwrap();
+                    out_tx.send((source, line)).ok();
                 }
             });
         }
     }
+}
+
+#[derive(Debug, Copy, Clone)]
+enum StreamSource {
+    StdOut,
+    StdErr,
 }
 
 #[derive(Deserialize)]

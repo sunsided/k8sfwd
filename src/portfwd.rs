@@ -1,9 +1,11 @@
 use lazy_static::lazy_static;
 use semver::Version;
+use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 use std::fs::File;
 use std::io;
 use std::io::Read;
+use std::net::IpAddr;
 
 lazy_static! {
     pub static ref LOWEST_SUPPORTED_VERSION: Version = Version::new(0, 1, 0);
@@ -25,7 +27,7 @@ pub struct PortForwardConfig {
     /// The name of the kubeconfig cluster to use.
     pub cluster: Option<String>,
     /// The addresses or host names to listen on; must be an IP address or `localhost`.
-    #[serde(default)]
+    #[serde(default, deserialize_with = "deserialize_listen_addrs")]
     pub listen_addrs: Vec<String>,
     /// The namespace to forward to, e.g. `default`.
     #[serde(default = "default_namespace")]
@@ -99,6 +101,49 @@ impl PortForwardConfigs {
     }
 }
 
+/// Parses a vector of IP addresses or the literal `localhost`.
+fn deserialize_listen_addrs<'de, D>(deserializer: D) -> Result<Vec<String>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    #[derive(Deserialize)]
+    struct Wrapper(#[serde(deserialize_with = "deserialize_listen_addr")] String);
+
+    let v = Vec::deserialize(deserializer)?;
+    Ok(v.into_iter().map(|Wrapper(a)| a).collect())
+}
+
+/// Parses an IPv4 or IPv6 address or the literal `localhost`.
+fn deserialize_listen_addr<'de, D>(deserializer: D) -> Result<String, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let buf = String::deserialize(deserializer)?;
+
+    if buf == "localhost" {
+        return Ok(buf);
+    }
+
+    if buf.starts_with('[') && buf.ends_with(']') {
+        let ip = &buf[1..(buf.len() - 1)];
+        return if ip.parse::<IpAddr>().is_ok() {
+            Ok(buf)
+        } else {
+            Err(Error::custom(format!(
+                "An invalid IPv6 address was specified: {buf}"
+            )))
+        };
+    }
+
+    if buf.parse::<IpAddr>().is_ok() {
+        return Ok(buf);
+    }
+
+    Err(Error::custom(
+        "Listen address must be either \"localhost\" or a valid IP address",
+    ))
+}
+
 impl<'de> Deserialize<'de> for Port {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
@@ -115,7 +160,7 @@ impl<'de> Deserialize<'de> for Port {
 
             fn visit_i16<E>(self, remote: i16) -> Result<Self::Value, E>
             where
-                E: serde::de::Error,
+                E: Error,
             {
                 if remote <= 0 {
                     return Err(E::custom("Invalid port number: value must be positive"));
@@ -129,7 +174,7 @@ impl<'de> Deserialize<'de> for Port {
 
             fn visit_u16<E>(self, remote: u16) -> Result<Self::Value, E>
             where
-                E: serde::de::Error,
+                E: Error,
             {
                 if remote == 0 {
                     return Err(E::custom("Invalid port number: value must be positive"));
@@ -143,7 +188,7 @@ impl<'de> Deserialize<'de> for Port {
 
             fn visit_u64<E>(self, remote: u64) -> Result<Self::Value, E>
             where
-                E: serde::de::Error,
+                E: Error,
             {
                 if remote == 0 {
                     return Err(E::custom("Invalid port number: value must be positive"));
@@ -163,7 +208,7 @@ impl<'de> Deserialize<'de> for Port {
 
             fn visit_str<E>(self, s: &str) -> Result<Self::Value, E>
             where
-                E: serde::de::Error,
+                E: Error,
             {
                 // Split the string by ':' and parse the numbers
                 let parts: Vec<&str> = s.split(':').collect();
@@ -200,25 +245,23 @@ impl<'de> Deserialize<'de> for Port {
                     match key.as_str() {
                         "local" => {
                             if local.is_some() {
-                                return Err(serde::de::Error::duplicate_field("local"));
+                                return Err(Error::duplicate_field("local"));
                             }
                             local = Some(map.next_value()?);
                         }
                         "remote" => {
                             if remote.is_some() {
-                                return Err(serde::de::Error::duplicate_field("remote"));
+                                return Err(Error::duplicate_field("remote"));
                             }
                             remote = Some(map.next_value()?);
                         }
-                        _ => {
-                            return Err(serde::de::Error::unknown_field(&key, &["local", "remote"]))
-                        }
+                        _ => return Err(Error::unknown_field(&key, &["local", "remote"])),
                     }
                 }
 
                 Ok(Port {
                     local,
-                    remote: remote.ok_or_else(|| serde::de::Error::missing_field("remote"))?,
+                    remote: remote.ok_or_else(|| Error::missing_field("remote"))?,
                 })
             }
         }
@@ -304,6 +347,64 @@ mod tests {
         let port: Port = serde_yaml::from_str("80").unwrap();
         assert_eq!(port.local, None);
         assert_eq!(port.remote, 80);
+    }
+
+    #[test]
+    fn test_listen_ip_and_localhost() {
+        serde_yaml::from_str::<PortForwardConfig>(
+            r#"
+            target: foo
+            listen_addrs:
+              - "127.0.0.1"
+              - "[::1]"
+              - "localhost"
+            ports:
+              - "1234:5678"
+        "#,
+        )
+        .expect("configuration is valid");
+    }
+
+    #[test]
+    fn test_listen_invalid_host() {
+        serde_yaml::from_str::<PortForwardConfig>(
+            r#"
+            target: foo
+            listen_addrs:
+              - "foo"
+            ports:
+              - "1234:5678"
+        "#,
+        )
+        .expect_err("literal host names must be exactly `localhost`");
+    }
+
+    #[test]
+    fn test_listen_invalid_ipv4() {
+        serde_yaml::from_str::<PortForwardConfig>(
+            r#"
+            target: foo
+            listen_addrs:
+              - "127.0.0.256"
+            ports:
+              - "1234:5678"
+        "#,
+        )
+        .expect_err("the IPv6 address is invalid");
+    }
+
+    #[test]
+    fn test_listen_invalid_ipv6() {
+        serde_yaml::from_str::<PortForwardConfig>(
+            r#"
+            target: foo
+            listen_addrs:
+              - "[fe80:2030:31:24]"
+            ports:
+              - "1234:5678"
+        "#,
+        )
+        .expect_err("the IPv6 address is invalid");
     }
 
     #[test]

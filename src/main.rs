@@ -1,10 +1,9 @@
 use crate::cli::Cli;
 use crate::kubectl::Kubectl;
-use crate::portfwd::{FromYaml, FromYamlError, PortForwardConfigs};
+use crate::portfwd::{FromYaml, FromYamlError};
 use anyhow::Result;
 use clap::Parser;
 use std::fs::File;
-use std::io::Read;
 use std::path::PathBuf;
 use std::process::ExitCode;
 use std::{env, io};
