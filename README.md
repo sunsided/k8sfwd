@@ -1,4 +1,4 @@
-# Kubernetes Port Forwarding Automation
+# k8s:fwd ⸺ config-based kubernetes multi-port forwarding
 
 Provide a `.k8sfwd` file in your project root and
 run this application to forward to multiple targets

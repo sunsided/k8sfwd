@@ -9,7 +9,20 @@ use std::process::ExitCode;
 mod kubectl;
 mod portfwd;
 
+static LOGO: &'static str = indoc::indoc!(
+    r#"
+    ██╗░░██╗░█████╗░░██████╗██╗███████╗░██╗░░░░░░░██╗██████╗
+    ██║░██╔╝██╔══██╗██╔════╝╚═╝██╔════╝░██║░░██╗░░██║██╔══██╗
+    █████═╝░╚█████╔╝╚█████╗░░░░█████╗░░░╚██╗████╗██╔╝██║░░██║
+    ██╔═██╗░██╔══██╗░╚═══██╗░░░██╔══╝░░░░████╔═████║░██║░░██║
+    ██║░╚██╗╚█████╔╝██████╔╝██╗██║░░░░░░░╚██╔╝░╚██╔╝░██████╔╝
+    ╚═╝░░╚═╝░╚════╝░╚═════╝░╚═╝╚═╝░░░░░░░░╚═╝░░░╚═╝░░╚═════╝"#
+);
+
 fn main() -> Result<ExitCode> {
+    println!("{}", LOGO.trim_start());
+    println!("k8s:fwd {}", env!("CARGO_PKG_VERSION"));
+
     let lowest_supported_version = Version::new(0, 1, 0);
     let highest_supported_version = lowest_supported_version.clone();
 

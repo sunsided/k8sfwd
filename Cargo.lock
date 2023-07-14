@@ -43,6 +43,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "indoc"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "761cde40c27e2a9877f8c928fd248b7eec9dd48623dd514b256858ca593fbba7"
+
+[[package]]
 name = "itoa"
 version = "1.0.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -55,6 +61,7 @@ dependencies = [
  "anyhow",
  "dotenvy",
  "exitcode",
+ "indoc",
  "semver",
  "serde",
  "serde_json",
