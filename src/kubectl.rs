@@ -211,9 +211,6 @@ impl Kubectl {
                     command.arg(&value);
                 }
 
-                // TODO: Handle invalid addresses (e.g. not an IP, not "localhost", ...)
-                // TODO: Handle invalid port configurations
-
                 let mut child = command.spawn()?;
 
                 // Read stdout and stderr in separate threads.
@@ -224,7 +221,8 @@ impl Kubectl {
                     StreamSource::StdOut,
                 );
 
-                // TODO: Handle `Error from server (NotFound): pods "foo-78b4c5d554-6z55j" not found")`?
+                // TODO: Handle `Error from server (NotFound): pods "foo-78b4c5d554-6z55j" not found")`
+                // TODO: Handle `Unable to listen on port 5012: Listeners failed to create with the following errors: [unable to create listener: Error listen tcp4 127.1.0.1:5012: bind: address already in use]`
                 Self::handle_pipe(
                     id,
                     out_tx.clone(),

@@ -19,19 +19,10 @@ use std::sync::mpsc::Receiver;
 use std::thread::JoinHandle;
 use std::{env, io, thread};
 
+mod banner;
 mod cli;
 mod config;
 mod kubectl;
-
-static BANNER: &'static str = indoc::indoc!(
-    r#"
-    ██╗░░██╗░█████╗░░██████╗░░░░░███████╗██╗░░░░░░░██╗██████╗
-    ██║░██╔╝██╔══██╗██╔════╝░██╗░██╔════╝██║░░██╗░░██║██╔══██╗
-    █████═╝░╚█████╔╝╚█████╗░░╚═╝░█████╗░░╚██╗████╗██╔╝██║░░██║
-    ██╔═██╗░██╔══██╗░╚═══██╗░██╗░██╔══╝░░░████╔═████║░██║░░██║
-    ██║░╚██╗╚█████╔╝██████╔╝░╚═╝░██║░░░░░░╚██╔╝░╚██╔╝░██████╔╝
-    ╚═╝░░╚═╝░╚════╝░╚═════╝░░░░░░╚═╝░░░░░░░╚═╝░░░╚═╝░░╚═════╝"#
-);
 
 fn main() -> Result<ExitCode> {
     dotenvy::dotenv().ok();
@@ -47,10 +38,7 @@ fn main() -> Result<ExitCode> {
         }
     };
 
-    // Print the banner.
-    println!("{}", BANNER.trim_start());
-    println!("k8s:fwd {}", env!("CARGO_PKG_VERSION"));
-    println!("Using kubectl version {kubectl_version}");
+    print_header(kubectl_version);
 
     // TODO: Watch the configuration file, stop missing bits and start new ones. (Hash the entries?)
 
@@ -123,6 +111,12 @@ fn main() -> Result<ExitCode> {
     print_thread.join().ok();
 
     exitcode(exitcode::OK)
+}
+
+fn print_header(kubectl_version: String) {
+    banner::Banner::println();
+    println!("k8s:fwd {}", env!("CARGO_PKG_VERSION"));
+    println!("Using kubectl version {kubectl_version}");
 }
 
 /// This method also unifies the "current" context/cluster configuration with the
