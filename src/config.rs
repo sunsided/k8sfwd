@@ -482,7 +482,7 @@ mod tests {
     #[test]
     fn test_operational_default() {
         let config = serde_yaml::from_str::<OperationalConfig>("").expect("configuration is valid");
-        assert_eq!(config.retry_delay_sec, RetryDelay(1.0));
+        assert_eq!(config.retry_delay_sec, RetryDelay(5.0));
     }
 
     #[test]
