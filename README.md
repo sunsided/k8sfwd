@@ -2,6 +2,12 @@
 
 A tool for handling port-forwards to multiple services and across multiple clusters.
 
+To install the latest version, run:
+
+```shell
+cargo install k8sfwd
+```
+
 ## Configuration
 
 If no configuration file is specified when starting the application, it will recursively look for
