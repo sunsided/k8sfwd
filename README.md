@@ -8,6 +8,10 @@ To install the latest version, run:
 cargo install k8sfwd
 ```
 
+Please note that the application internally relies on `kubectl`, so it needs to be present in your path.
+If `kubectl` is not on your path, you may specify it via the `--kubectl` argument or
+the `KUBECTL_PATH` environment variable.
+
 ## Configuration
 
 If no configuration file is specified when starting the application, it will recursively look for

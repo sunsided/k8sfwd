@@ -48,7 +48,6 @@ fn main() -> Result<ExitCode> {
     println!("k8s:fwd {}", env!("CARGO_PKG_VERSION"));
     println!("Using kubectl version {kubectl_version}");
 
-    // TODO: Allow to specify a configuration as a command-line argument.
     // TODO: Watch the configuration file, stop missing bits and start new ones. (Hash the entries?)
 
     // TODO: Add home directory config. See "home" crate. Allow merging of configuration.
