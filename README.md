@@ -12,6 +12,36 @@ Please note that the application internally relies on `kubectl`, so it needs to 
 If `kubectl` is not on your path, you may specify it via the `--kubectl` argument or
 the `KUBECTL_PATH` environment variable.
 
+Depending on your configuration, you'll be greeted with something along the lines of:
+
+```
+██╗░░██╗░█████╗░░██████╗░░░░░███████╗██╗░░░░░░░██╗██████╗
+██║░██╔╝██╔══██╗██╔════╝░██╗░██╔════╝██║░░██╗░░██║██╔══██╗
+█████═╝░╚█████╔╝╚█████╗░░╚═╝░█████╗░░╚██╗████╗██╔╝██║░░██║
+██╔═██╗░██╔══██╗░╚═══██╗░██╗░██╔══╝░░░████╔═████║░██║░░██║
+██║░╚██╗╚█████╔╝██████╔╝░╚═╝░██║░░░░░░╚██╔╝░╚██╔╝░██████╔╝
+╚═╝░░╚═╝░╚════╝░╚═════╝░░░░░░╚═╝░░░░░░░╚═╝░░░╚═╝░░╚═════╝
+k8s:fwd 0.1.0
+Using kubectl version v1.24.12-dispatcher
+Using config from .k8sfwd
+
+Forwarding to the following targets:
+#0 Items API (Integration)
+   target:  pod/foo-78b4c5d554-6z55j.test-api
+   context: gke_integration
+   cluster: gke_integration
+#1 target:  service/foo.test-api
+   context: (default)
+   cluster: gke_production
+
+Spawning child processes:
+#0: Error from server (NotFound): pods "foo-78b4c5d554-6z55j" not found
+#0: Process exited with exit status: 1 - will retry in 5 sec
+#1: Forwarding from 127.1.0.1:5012 -> 80
+#0: Error from server (NotFound): pods "foo-78b4c5d554-6z55j" not found
+#0: Process exited with exit status: 1 - will retry in 5 sec
+```
+
 ## Configuration
 
 If no configuration file is specified when starting the application, it will recursively look for
