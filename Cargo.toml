@@ -2,7 +2,12 @@
 name = "k8sfwd"
 version = "0.1.0"
 description = "A Kubernetes port-forwarding utility for managing multiple targets"
+homepage = "https://github.com/sunsided/k8sfwd"
+repository = "https://github.com/sunsided/k8sfwd"
 authors = ["Markus Mayer"]
+keywords = ["kubernetes", "kubectl", "cli", "port-forward", "k8s"]
+categories = ["command-line-utilities"]
+readme = "README.md"
 license = "EUPL-1.2"
 edition = "2021"
 
