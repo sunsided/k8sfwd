@@ -7,7 +7,7 @@ use std::path::PathBuf;
 use std::process::{Command, ExitStatus, Stdio};
 use std::sync::mpsc::Sender;
 use std::thread::JoinHandle;
-use std::{io, thread};
+use std::{io, process, thread};
 
 #[derive(Debug)]
 pub struct Kubectl {
@@ -160,6 +160,8 @@ impl Kubectl {
                     StreamSource::StdErr,
                 );
 
+                let mut child = ChildGuard(child);
+
                 // Wait for the child process to finish
                 let status = child.wait();
                 let status = match status {
@@ -264,4 +266,19 @@ pub enum VersionError {
 pub enum ContextError {
     #[error(transparent)]
     CommandFailed(#[from] io::Error),
+}
+
+/// A guard to ensure the child process is terminated when the thread is cancelled.
+struct ChildGuard(process::Child);
+
+impl ChildGuard {
+    pub fn wait(&mut self) -> io::Result<ExitStatus> {
+        self.0.wait()
+    }
+}
+
+impl Drop for ChildGuard {
+    fn drop(&mut self) {
+        self.0.kill().ok();
+    }
 }
