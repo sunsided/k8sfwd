@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: Copyright 2023 Markus Mayer
+// SPDX-License-Identifier: EUPL-1.2
+// SPDX-FileType: SOURCE
+
 use crate::config::{OperationalConfig, PortForwardConfig, RetryDelay};
 use crate::ConfigId;
 use serde::Deserialize;

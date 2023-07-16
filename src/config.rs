@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: Copyright 2023 Markus Mayer
+// SPDX-License-Identifier: EUPL-1.2
+// SPDX-FileType: SOURCE
+
 use lazy_static::lazy_static;
 use semver::Version;
 use serde::de::Error;
