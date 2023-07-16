@@ -132,18 +132,20 @@ fn sanitize_config(
     }
 
     for config in config.targets.iter_mut() {
-        // Only bind to default context and cluster if none of the values is specified.
-        // If we don't, we may end up using the current context with a different context's
-        // cluster, or vice versa.
+        // Only bind to default cluster if none of the values is specified.
+        // This is important since otherwise we might end up in a situation where
+        // the user specified a context (implying _its_ default cluster) yet
+        // we are trying to specify the default cluster of the _current_ context.
+        // TODO: Get the "current cluster" from the specified context, if available.
         if config.context.is_none() && config.cluster.is_none() {
-            // TODO: If possible, always specify the context if unset, regardless of `--cluster`.
-            //       This is helpful if the forwarding stops and is restarted while the cluster
-            //       context was changed manually during that time. In this event, the forwarding
-            //       would address a different cluster than before, which might cause trouble.
-            config.context = Some(current_context.clone());
-
-            // TODO: Test with `cluster` set to a cluster not available in the current `context`.
             config.cluster = current_cluster.clone();
+        }
+
+        // It appears we can always autofill the context value since the cluster values seem to
+        // take precedence when specified. This should work as long as the current context
+        // has a user that is allowed to access the specified cluster.
+        if config.context.is_none() {
+            config.context = Some(current_context.clone());
         }
     }
 }

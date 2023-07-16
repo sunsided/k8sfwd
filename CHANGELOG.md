@@ -7,9 +7,10 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
-- Only default to current context/cluster when none of the values is specified.
+- Only default to current cluster when neither context nor cluster is specified.
   Previously, specifying only one of the values would result in the other
-  value being automatically filled, resulting in possibly invalid combinations.
+  value being automatically filled from the currently active context, resulting in
+  possibly invalid combinations.
 
 ## [0.1.0] - 2023-07-16
 
