@@ -1,10 +1,10 @@
-use crate::portfwd::PortForwardConfig;
+use crate::config::{OperationalConfig, PortForwardConfig, RetryDelay};
+use crate::ConfigId;
 use serde::Deserialize;
 use std::env::current_dir;
 use std::io::{BufRead, Read};
 use std::path::PathBuf;
-use std::process::{Command, Stdio};
-use std::sync::mpsc;
+use std::process::{Command, ExitStatus, Stdio};
 use std::sync::mpsc::Sender;
 use std::thread::JoinHandle;
 use std::{io, thread};
@@ -33,106 +33,160 @@ impl Kubectl {
         Ok(value.client_version.git_version)
     }
 
+    pub fn current_context(&self) -> Result<String, ContextError> {
+        let output = Command::new(&self.kubectl)
+            .current_dir(&self.current_dir)
+            .args([
+                "config",
+                "view",
+                "--minify",
+                "-o",
+                "jsonpath='{.current-context}'",
+            ])
+            .output()?;
+
+        let value = String::from_utf8_lossy(&output.stdout);
+        let value = value.trim_matches('\'');
+        Ok(value.into())
+    }
+
+    pub fn current_cluster(&self) -> Result<Option<String>, ContextError> {
+        let output = Command::new(&self.kubectl)
+            .current_dir(&self.current_dir)
+            .args([
+                "config",
+                "view",
+                "--minify",
+                "-o",
+                "jsonpath='{.clusters[0].name}'",
+            ])
+            .output()?;
+
+        let value = String::from_utf8_lossy(&output.stdout);
+        let value = value.trim_matches('\'');
+        if !value.is_empty() {
+            Ok(Some(value.into()))
+        } else {
+            Ok(None)
+        }
+    }
+
     pub fn port_forward(
         &self,
-        config: &PortForwardConfig,
+        id: ConfigId,
+        config: OperationalConfig,
+        fwd_config: PortForwardConfig,
+        out_tx: Sender<ChildEvent>,
     ) -> Result<JoinHandle<Result<(), anyhow::Error>>, VersionError> {
         let target = format!(
             "{resource}/{name}",
-            resource = config.r#type.to_arg(),
-            name = config.target
+            resource = fwd_config.r#type.to_arg(),
+            name = fwd_config.target
         );
 
-        let display_name = config.name.to_owned().unwrap_or(format!(
-            "{host}.{namespace}",
-            host = config.target,
-            namespace = config.namespace
-        ));
-
-        let mut command = Command::new(&self.kubectl);
-        command
-            .current_dir(&self.current_dir)
-            .stdout(Stdio::piped())
-            .stderr(Stdio::piped())
-            .args(["port-forward"]);
-
-        // the context to use
-        if let Some(context) = &config.context {
-            command.args(["--context", context]);
-        }
-
-        // the cluster to use
-        if let Some(cluster) = &config.cluster {
-            command.args(["--cluster", cluster]);
-        }
-
-        // which addresses to listen on locally
-        match &config.listen_addrs[..] {
-            [] => {}
-            addresses => {
-                let addresses = addresses.join(",");
-                command.args(["--address", &addresses]);
-            }
-        };
-
-        // the namespace to select
-        command.args(["-n", &config.namespace]);
-
-        // pod/name, deployment/name, service/name
-        command.arg(target);
-
-        // Apply the port bindings
-        for port in &config.ports {
-            let value = if let Some(local) = port.local {
-                format!("{local}:{remote}", remote = port.remote)
-            } else {
-                format!(":{remote}", remote = port.remote)
-            };
-
-            command.arg(&value);
-        }
-
-        // TODO: Handle invalid addresses (e.g. not an IP, not "localhost", ...)
-        // TODO: Handle invalid port configurations
-
-        // Create channels for communication
-        let (out_tx, out_rx) = mpsc::channel();
-        let (status_tx, status_rx) = mpsc::channel();
+        let kubectl = self.kubectl.clone();
+        let current_dir = self.current_dir.clone();
 
         let child_thread = thread::spawn(move || {
-            let mut child = command.spawn()?;
+            let mut bootstrap = true;
+            'new_process: loop {
+                // Only delay start at the second iteration.
+                if !bootstrap && config.retry_delay_sec > RetryDelay::NONE {
+                    thread::sleep(config.retry_delay_sec.into());
+                }
+                bootstrap = false;
 
-            // Read stdout and stderr in separate threads.
-            Self::handle_pipe(out_tx.clone(), child.stdout.take(), StreamSource::StdOut);
-            Self::handle_pipe(out_tx, child.stderr.take(), StreamSource::StdErr);
+                let mut command = Command::new(kubectl.clone());
+                command
+                    .current_dir(current_dir.clone())
+                    .stdout(Stdio::piped())
+                    .stderr(Stdio::piped())
+                    .args(["port-forward"]);
 
-            let status = match child.try_wait() {
-                Ok(Some(status)) => todo!("Failed on startup"),
-                Ok(None) => child.wait(),
-                Err(e) => todo!("Failed to wait for result"),
-            };
+                // the context to use
+                if let Some(context) = &fwd_config.context {
+                    command.args(["--context", context]);
+                }
 
-            // Wait for the child process to finish
-            let status = status.expect("Failed to wait for child process");
+                // the cluster to use
+                if let Some(cluster) = &fwd_config.cluster {
+                    command.args(["--cluster", cluster]);
+                }
 
-            if !status.success() {
-                todo!("restart the forwarding")
+                // which addresses to listen on locally
+                match &fwd_config.listen_addrs[..] {
+                    [] => {}
+                    addresses => {
+                        let addresses = addresses.join(",");
+                        command.args(["--address", &addresses]);
+                    }
+                };
+
+                // the namespace to select
+                command.args(["-n", &fwd_config.namespace]);
+
+                // pod/name, deployment/name, service/name
+                command.arg(target.clone());
+
+                // Apply the port bindings
+                for port in &fwd_config.ports {
+                    let value = if let Some(local) = port.local {
+                        format!("{local}:{remote}", remote = port.remote)
+                    } else {
+                        format!(":{remote}", remote = port.remote)
+                    };
+
+                    command.arg(&value);
+                }
+
+                // TODO: Handle invalid addresses (e.g. not an IP, not "localhost", ...)
+                // TODO: Handle invalid port configurations
+
+                let mut child = command.spawn()?;
+
+                // Read stdout and stderr in separate threads.
+                Self::handle_pipe(
+                    id,
+                    out_tx.clone(),
+                    child.stdout.take(),
+                    StreamSource::StdOut,
+                );
+
+                // TODO: Handle `Error from server (NotFound): pods "foo-78b4c5d554-6z55j" not found")`?
+                Self::handle_pipe(
+                    id,
+                    out_tx.clone(),
+                    child.stderr.take(),
+                    StreamSource::StdErr,
+                );
+
+                // Wait for the child process to finish
+                let status = child.wait();
+                let status = match status {
+                    Ok(status) => status,
+                    Err(e) => {
+                        out_tx.send(ChildEvent::Error(id, ChildError::Wait(e))).ok();
+                        // TODO: Break out of this loop if the error is unfixable?
+                        continue 'new_process;
+                    }
+                };
+
+                out_tx
+                    .send(ChildEvent::Exit(
+                        id,
+                        status,
+                        RestartPolicy::WillRestartIn(config.retry_delay_sec),
+                    ))
+                    .ok();
             }
-
-            status_tx
-                .send(status)
-                .expect("Failed to send process status");
-
-            println!("{display_name}: Process exited with status: {}", status);
-
-            Ok(())
         });
 
         Ok(child_thread)
     }
 
     fn handle_pipe<T: Read + Send + 'static>(
-        out_tx: Sender<(StreamSource, String)>,
+        id: ConfigId,
+        out_tx: Sender<ChildEvent>,
         pipe: Option<T>,
         source: StreamSource,
     ) {
@@ -145,15 +199,34 @@ impl Kubectl {
                     }
 
                     let line = line.unwrap();
-                    out_tx.send((source, line)).ok();
+                    out_tx.send(ChildEvent::Output(id, source, line)).ok();
                 }
             });
         }
     }
 }
 
+#[derive(Debug)]
+pub enum ChildEvent {
+    Output(ConfigId, StreamSource, String),
+    Exit(ConfigId, ExitStatus, RestartPolicy),
+    Error(ConfigId, ChildError),
+}
+
+#[derive(Debug)]
+pub enum RestartPolicy {
+    WillRestartIn(RetryDelay),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ChildError {
+    /// Failed to wait for the child process' status.
+    #[error(transparent)]
+    Wait(#[from] io::Error),
+}
+
 #[derive(Debug, Copy, Clone)]
-enum StreamSource {
+pub enum StreamSource {
     StdOut,
     StdErr,
 }
@@ -183,6 +256,12 @@ pub enum ShellError {
 pub enum VersionError {
     #[error("The version format could not be read")]
     InvalidFormat(#[from] serde_json::Error),
+    #[error(transparent)]
+    CommandFailed(#[from] io::Error),
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ContextError {
     #[error(transparent)]
     CommandFailed(#[from] io::Error),
 }

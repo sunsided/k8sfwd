@@ -2,23 +2,44 @@ use lazy_static::lazy_static;
 use semver::Version;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
+use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::io;
 use std::io::Read;
 use std::net::IpAddr;
+use std::time::Duration;
 
 lazy_static! {
     pub static ref LOWEST_SUPPORTED_VERSION: Version = Version::new(0, 1, 0);
     pub static ref HIGHEST_SUPPORTED_VERSION: Version = Version::new(0, 1, 0);
 }
 
+pub static DEFAULT_CONFIG_FILE: &'static str = ".k8sfwd";
+
 #[derive(Debug, Deserialize)]
 pub struct PortForwardConfigs {
     pub version: Version,
+    #[serde(default)]
+    pub config: OperationalConfig,
+    // TODO: Add mappings of cluster names; useful for merged hierarchical configs
     pub targets: Vec<PortForwardConfig>,
 }
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Deserialize, Default)]
+pub struct OperationalConfig {
+    /// The number of seconds to delay retries for.
+    #[serde(default)]
+    pub retry_delay_sec: RetryDelay,
+}
+
+#[derive(Deserialize, Debug, Copy, Clone, PartialOrd, PartialEq)]
+pub struct RetryDelay(f64);
+
+impl RetryDelay {
+    pub const NONE: RetryDelay = RetryDelay(0.0);
+}
+
+#[derive(Debug, Clone, Deserialize)]
 pub struct PortForwardConfig {
     /// An optional name used to refer to this configuration.
     pub name: Option<String>,
@@ -42,7 +63,7 @@ pub struct PortForwardConfig {
 }
 
 /// The type of resource to forward to.
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Clone, Copy, Deserialize)]
 pub enum ResourceType {
     #[serde(rename = "service")]
     Service,
@@ -53,12 +74,30 @@ pub enum ResourceType {
 }
 
 /// A port to forward.
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Port {
     /// The local port to forward to.
     pub local: Option<u16>,
     /// The remote port to forward to.
     pub remote: u16,
+}
+
+impl Default for RetryDelay {
+    fn default() -> Self {
+        Self(5.0)
+    }
+}
+
+impl Into<Duration> for RetryDelay {
+    fn into(self) -> Duration {
+        Duration::from_secs_f64(self.0)
+    }
+}
+
+impl Display for RetryDelay {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} sec", self.0)
+    }
 }
 
 impl Default for ResourceType {
@@ -411,6 +450,8 @@ mod tests {
     fn test_entire_config() {
         let config = r#"
             version: 0.1.0
+            config:
+              retry_delay_sec: 3.14
             targets:
               - name: Test API (Staging)
                 target: foo
@@ -436,5 +477,18 @@ mod tests {
 
         let config: PortForwardConfigs = serde_yaml::from_str(config).unwrap();
         assert_eq!(config.targets.len(), 2);
+    }
+
+    #[test]
+    fn test_operational_default() {
+        let config = serde_yaml::from_str::<OperationalConfig>("").expect("configuration is valid");
+        assert_eq!(config.retry_delay_sec, RetryDelay(1.0));
+    }
+
+    #[test]
+    fn test_operational() {
+        let config = serde_yaml::from_str::<OperationalConfig>(r#"retry_delay_sec: 3.14"#)
+            .expect("configuration is valid");
+        assert_eq!(config.retry_delay_sec, RetryDelay(3.14))
     }
 }
