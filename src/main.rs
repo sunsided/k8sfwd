@@ -132,12 +132,17 @@ fn sanitize_config(
     }
 
     for config in config.targets.iter_mut() {
-        if config.context.is_none() {
+        // Only bind to default context and cluster if none of the values is specified.
+        // If we don't, we may end up using the current context with a different context's
+        // cluster, or vice versa.
+        if config.context.is_none() && config.cluster.is_none() {
+            // TODO: If possible, always specify the context if unset, regardless of `--cluster`.
+            //       This is helpful if the forwarding stops and is restarted while the cluster
+            //       context was changed manually during that time. In this event, the forwarding
+            //       would address a different cluster than before, which might cause trouble.
             config.context = Some(current_context.clone());
-        }
 
-        // Print the currently targeted cluster
-        if config.cluster.is_none() {
+            // TODO: Test with `cluster` set to a cluster not available in the current `context`.
             config.cluster = current_cluster.clone();
         }
     }
@@ -171,16 +176,15 @@ fn map_and_print_config(configs: Vec<PortForwardConfig>) -> HashMap<ConfigId, Po
         }
 
         // Print the currently selected context
-        debug_assert!(config.context.is_some());
         println!(
             "{padding} context: {}",
-            config.context.as_deref().unwrap_or("(current)")
+            config.context.as_deref().unwrap_or("(implicit)")
         );
 
         // Print the currently targeted cluster
         println!(
             "{padding} cluster: {}",
-            config.cluster.as_deref().unwrap_or("(current)")
+            config.cluster.as_deref().unwrap_or("(implicit)")
         );
 
         map.insert(id, config);

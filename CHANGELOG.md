@@ -3,6 +3,14 @@
 All notable changes to this project will be documented in this file.
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Fixed
+
+- Only default to current context/cluster when none of the values is specified.
+  Previously, specifying only one of the values would result in the other
+  value being automatically filled, resulting in possibly invalid combinations.
+
 ## [0.1.0] - 2023-07-16
 
 ### Internal
