@@ -33,6 +33,7 @@ impl Kubectl {
         Ok(value.client_version.git_version)
     }
 
+    /// Gets the currently active contexts.
     pub fn current_context(&self) -> Result<String, ContextError> {
         let output = Command::new(&self.kubectl)
             .current_dir(&self.current_dir)
@@ -50,6 +51,7 @@ impl Kubectl {
         Ok(value.into())
     }
 
+    /// Gets the currently active contexts' cluster.
     pub fn current_cluster(&self) -> Result<Option<String>, ContextError> {
         let output = Command::new(&self.kubectl)
             .current_dir(&self.current_dir)
@@ -64,6 +66,72 @@ impl Kubectl {
 
         let value = String::from_utf8_lossy(&output.stdout);
         let value = value.trim_matches('\'');
+        if !value.is_empty() {
+            Ok(Some(value.into()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Given the name of the cluster, identifies a context.
+    pub fn context_from_cluster(
+        &self,
+        cluster: Option<&String>,
+    ) -> Result<Option<String>, ContextError> {
+        if cluster.is_none() {
+            return Ok(None);
+        }
+
+        let context = cluster.expect("value exists");
+        let jsonpath =
+            format!("jsonpath='{{$.contexts[?(@.context.cluster==\"{context}\")].name}}'");
+        let output = Command::new(&self.kubectl)
+            .current_dir(&self.current_dir)
+            .args(["config", "view", "--merge=true", "-o", &jsonpath])
+            .output()?;
+
+        let value = String::from_utf8_lossy(&output.stdout);
+        let value = value.trim_matches('\'');
+        // Array values (in case multiple match) are separated by space.
+        let values: Vec<_> = value.split(' ').collect();
+        if values.len() > 1 {
+            return Ok(None);
+        }
+
+        let value = values[0];
+        if !value.is_empty() {
+            Ok(Some(value.into()))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Given the name of the context, identifies its cluster.
+    pub fn cluster_from_context(
+        &self,
+        context: Option<&String>,
+    ) -> Result<Option<String>, ContextError> {
+        if context.is_none() {
+            return Ok(None);
+        }
+
+        let context = context.expect("value exists");
+        let jsonpath =
+            format!("jsonpath='{{$.contexts[?(@.name==\"{context}\")].context.cluster}}'");
+        let output = Command::new(&self.kubectl)
+            .current_dir(&self.current_dir)
+            .args(["config", "view", "--merge=true", "-o", &jsonpath])
+            .output()?;
+
+        let value = String::from_utf8_lossy(&output.stdout);
+        let value = value.trim_matches('\'');
+        // Array values (in case multiple match) are separated by space.
+        let values: Vec<_> = value.split(' ').collect();
+        if values.len() > 1 {
+            return Ok(None);
+        }
+
+        let value = values[0];
         if !value.is_empty() {
             Ok(Some(value.into()))
         } else {

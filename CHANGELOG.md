@@ -5,6 +5,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## Unreleased
 
+### Added
+
+- If only the context or the cluster is specified, the other part will be automatically
+  looked up from the current configuration. If a single match is found, its value will
+  be explicitly specified to `kubectl`. This should help when changing contexts while
+  having a port-forwarding session open as intermittent errors will consistently
+  produce the same forwarding rule regardless of the currently active context.
+
 ### Fixed
 
 - Only default to current cluster when neither context nor cluster is specified.

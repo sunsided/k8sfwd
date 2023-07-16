@@ -90,7 +90,8 @@ fn main() -> Result<ExitCode> {
     // Sanitize default values.
     let current_context = kubectl.current_context()?;
     let current_cluster = kubectl.current_cluster()?;
-    sanitize_config(&mut configs, current_context, current_cluster);
+
+    sanitize_config(&mut configs, current_context, current_cluster, &kubectl);
 
     // Map out the config.
     println!("Forwarding to the following targets:");
@@ -126,26 +127,33 @@ fn sanitize_config(
     config: &mut PortForwardConfigs,
     current_context: String,
     current_cluster: Option<String>,
+    kubectl: &Kubectl,
 ) {
     if config.config.retry_delay_sec < RetryDelay::NONE {
         config.config.retry_delay_sec = RetryDelay::NONE;
     }
 
     for config in config.targets.iter_mut() {
-        // Only bind to default cluster if none of the values is specified.
-        // This is important since otherwise we might end up in a situation where
-        // the user specified a context (implying _its_ default cluster) yet
-        // we are trying to specify the default cluster of the _current_ context.
-        // TODO: Get the "current cluster" from the specified context, if available.
-        if config.context.is_none() && config.cluster.is_none() {
-            config.cluster = current_cluster.clone();
-        }
-
-        // It appears we can always autofill the context value since the cluster values seem to
-        // take precedence when specified. This should work as long as the current context
-        // has a user that is allowed to access the specified cluster.
-        if config.context.is_none() {
-            config.context = Some(current_context.clone());
+        match (&mut config.context, &mut config.cluster) {
+            (Some(_context), Some(_cluster)) => { /* nothing to do */ }
+            (Some(context), None) => match kubectl.cluster_from_context(Some(&context)) {
+                Ok(Some(cluster)) => {
+                    config.cluster = Some(cluster);
+                }
+                Ok(None) => {}
+                Err(_) => {}
+            },
+            (None, Some(cluster)) => match kubectl.context_from_cluster(Some(&cluster)) {
+                Ok(Some(context)) => {
+                    config.context = Some(context);
+                }
+                Ok(None) => {}
+                Err(_) => {}
+            },
+            (None, None) => {
+                config.context = Some(current_context.clone());
+                config.cluster = current_cluster.clone();
+            }
         }
     }
 }
