@@ -26,19 +26,23 @@ Using kubectl version v1.24.12-dispatcher
 Using config from .k8sfwd
 
 Forwarding to the following targets:
-#0 Items API (Integration)
-   target:  pod/foo-78b4c5d554-6z55j.test-api
-   context: gke_integration
-   cluster: gke_integration
-#1 target:  service/foo.test-api
+#0 Items API (Staging)
+   target:  service/foo.test-api
    context: (default)
-   cluster: gke_production
+   cluster: (default)
+#1 Items API (Production)
+   target:  pod/foo-59b58f5d68-6t6bh.test-api
+   context: (default)
+   cluster: production
 
 Spawning child processes:
-#0: Error from server (NotFound): pods "foo-78b4c5d554-6z55j" not found
+#0: Error from server (NotFound): pods "foo-59b58f5d68-6t6bh" not found
 #0: Process exited with exit status: 1 - will retry in 5 sec
-#1: Forwarding from 127.1.0.1:5012 -> 80
-#0: Error from server (NotFound): pods "foo-78b4c5d554-6z55j" not found
+#1: Forwarding from 127.0.0.1:5012 -> 80
+#1: Forwarding from 127.0.0.1:46737 -> 8080
+#1: Forwarding from [::1]:5012 -> 80
+#1: Forwarding from [::1]:46737 -> 8080
+#0: Error from server (NotFound): pods "foo-59b58f5d68-6t6bh" not found
 #0: Process exited with exit status: 1 - will retry in 5 sec
 ```
 
