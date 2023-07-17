@@ -7,6 +7,9 @@ use std::net::IpAddr;
 pub struct PortForwardConfig {
     /// An optional name used to refer to this configuration.
     pub name: Option<String>,
+    /// An optional set of tags to apply to the configuration.
+    #[serde(default)]
+    pub tags: Vec<String>,
     /// The name of the kubeconfig context to use.
     pub context: Option<String>,
     /// The name of the kubeconfig cluster to use.
@@ -76,6 +79,23 @@ where
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_tags() {
+        let config = serde_yaml::from_str::<PortForwardConfig>(
+            r#"
+            target: foo
+            tags:
+              - foo
+              - bar
+            ports:
+              - "1234:5678"
+        "#,
+        )
+        .unwrap();
+
+        assert_eq!(config.tags, ["foo", "bar"])
+    }
 
     #[test]
     fn test_listen_ip_and_localhost() {
