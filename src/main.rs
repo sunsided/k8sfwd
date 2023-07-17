@@ -76,6 +76,12 @@ fn main() -> Result<ExitCode> {
         return exitcode(exitcode::CONFIG);
     }
 
+    // Early exit.
+    if configs.targets.is_empty() {
+        eprintln!("No targets configured.");
+        return exitcode(exitcode::CONFIG);
+    }
+
     // Create channels for communication.
     let (out_tx, out_rx) = mpsc::channel();
     let print_thread = run_output_loop(out_rx);
@@ -89,6 +95,10 @@ fn main() -> Result<ExitCode> {
     // Map out the config.
     println!("Forwarding to the following targets:");
     let map = map_and_print_config(configs.targets, cli.tags.into_iter().collect());
+    if map.is_empty() {
+        eprintln!("No targets selected.");
+        return exitcode(exitcode::OK);
+    }
     println!();
 
     // For each configuration, attempt a port-forward.
@@ -239,7 +249,7 @@ fn run_output_loop(out_rx: Receiver<ChildEvent>) -> JoinHandle<()> {
                 }
                 ChildEvent::Error(id, error) => {
                     // TODO: use display name
-                    eprintln!("{id}: An error occured: {}", error);
+                    eprintln!("{id}: An error occurred: {}", error);
                 }
             }
         }
