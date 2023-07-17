@@ -1,10 +1,10 @@
-use serde::{Deserialize, Deserializer};
+use serde::{de, Deserialize, Deserializer};
 use std::ops::Deref;
 use std::str::FromStr;
 
 /// A tag
-#[derive(Debug, Clone, Deserialize, Eq, PartialEq, Ord, PartialOrd, Hash)]
-pub struct Tag(#[serde(deserialize_with = "deserialize_tag")] String);
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+pub struct Tag(String);
 
 impl Tag {
     pub fn new_unchecked<V: Into<String>>(value: V) -> Self {
@@ -52,30 +52,38 @@ pub enum FromStringError {
     InvalidCharacter(char),
 }
 
-fn deserialize_tag<'de, D>(deserializer: D) -> Result<String, D::Error>
-where
-    D: Deserializer<'de>,
-{
-    let tag = String::deserialize(deserializer)?;
-    if tag.is_empty() {
-        return Ok(String::new());
-    }
-
-    let mut chars = tag.chars();
-    let first = chars.next().expect("tag is not empty");
-    if !first.is_ascii_alphabetic() {
-        return Err(serde::de::Error::custom(format!(
-            "Tag name must begin with an alphabetic character"
-        )));
-    }
-
-    while let Some(c) = chars.next() {
-        if !c.is_ascii_alphanumeric() && c != '-' && c != '_' {
-            return Err(serde::de::Error::custom(format!(
-                "Tag name must contain only alphanumeric characters, \"-\" or \"_\""
-            )));
+impl<'de> Deserialize<'de> for Tag {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let tag = String::deserialize(deserializer)?;
+        match Tag::from_str(&tag) {
+            Ok(tag) => Ok(tag),
+            Err(e) => Err(de::Error::custom(e)),
         }
     }
+}
 
-    Ok(tag)
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_trivial() {
+        let tag: Tag = serde_yaml::from_str("foo").unwrap();
+        assert_eq!(tag, Tag::new_unchecked("foo"));
+    }
+
+    #[test]
+    fn test_complex() {
+        let tag: Tag = serde_yaml::from_str("fOo_bAR-12-_-").unwrap();
+        assert_eq!(tag, Tag::new_unchecked("fOo_bAR-12-_-"));
+    }
+
+    #[test]
+    fn test_invalid() {
+        let tag = serde_yaml::from_str::<Tag>("123");
+        assert!(tag.is_err());
+    }
 }
