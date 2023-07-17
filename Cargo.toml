@@ -1,6 +1,6 @@
 [package]
 name = "k8sfwd"
-version = "0.1.0"
+version = "0.2.0"
 description = "A Kubernetes port-forwarding utility for managing multiple targets"
 homepage = "https://github.com/sunsided/k8sfwd"
 repository = "https://github.com/sunsided/k8sfwd"
@@ -13,7 +13,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.72"
-clap = { version = "4.3.12", features = ["derive", "env"] }
+clap = { version = "4.3.14", features = ["derive", "env"] }
 dotenvy = "0.15.7"
 exitcode = "1.1.2"
 indoc = "2.0.3"

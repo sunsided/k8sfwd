@@ -2,8 +2,8 @@
 
 A tool for handling port-forwards to multiple services and across multiple clusters.
 
-The setup is currently based on `cargo` until platform-specific binaries can be provided.
-To install the latest version, run:
+The setup is currently based on [cargo] until platform-specific binaries can be provided.
+To install the latest version (or update to it), run:
 
 ```shell
 cargo install k8sfwd
@@ -108,3 +108,5 @@ targets:
     ports:
       - "5012:80"
 ```
+
+[cargo]: https://crates.io/
