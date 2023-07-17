@@ -2,6 +2,7 @@
 
 A tool for handling port-forwards to multiple services and across multiple clusters.
 
+The setup is currently based on `cargo` until platform-specific binaries can be provided.
 To install the latest version, run:
 
 ```shell
@@ -48,9 +49,11 @@ Spawning child processes:
 
 ## Configuration
 
-If no configuration file is specified when starting the application, it will recursively look for
-a `.k8sfwd` file in the current directory hierarchy. If a file is specified on program launch,
-this configuration is used instead.
+The configuration is provided as a YAML file. If no configuration file is specified when starting the application,
+it will recursively look for a `.k8sfwd` file in the current directory hierarchy. If a file is specified on
+program launch, that configuration is used instead.
+
+See [`k8sfwd-example.yaml`](k8sfwd-example.yaml) for an example.
 
 ```yaml
 ---

@@ -1,0 +1,25 @@
+---
+version: 0.1.0
+config:
+  retry_delay_sec: 5.0                  # Optional: Number of seconds to wait before attempting
+                                        # to re-establish a broken connection.
+targets:
+  - name: Foo API (Staging)             # Optional, for display purposes.
+    target: foo-78b4c5d554-6z55j        # The name of the resource to forward to.
+    type: pod                           # The type of resource, either "service", "deployment" or "pod".
+    namespace: bar                      # The namespace of the resource; defaults to "default".
+    listen_addrs:                       # Optional, the listen addresses to use; defaults to "localhost".
+      - "127.0.0.1"
+    ports:                              # The source ports to forward.
+      - "5012:80"                       # Forward resource port 80 to local port 5012.
+      - "8080"                          # Forward resource port 8080 to random local port.
+  - # name: Fool API (Production)
+    target: foo
+    type: service
+    namespace: bar
+    context: production                 # Optional; will default to current context.
+    cluster: null                       # Optional; will default to the context's default cluster.
+    listen_addrs:
+      - "127.1.0.1"
+    ports:
+      - "5012:80"
