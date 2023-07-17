@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: EUPL-1.2
 // SPDX-FileType: SOURCE
 
-use crate::config::Tag;
+use crate::config::TagSelection;
 use clap::Parser;
 use std::fs::File;
 use std::path::PathBuf;
@@ -25,7 +25,7 @@ pub struct Cli {
 
     /// Specifies the tags of the targets to forward to.
     #[arg(short, long, value_name = "TAGS", num_args = 1.., value_delimiter = ' ', allow_hyphen_values = false)]
-    pub tags: Vec<Tag>,
+    pub tags: Vec<TagSelection>,
 }
 
 fn config_file_exists(s: &str) -> Result<PathBuf, String> {

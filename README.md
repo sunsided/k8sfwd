@@ -47,6 +47,30 @@ Spawning child processes:
 #0: Process exited with exit status: 1 - will retry in 5 sec
 ```
 
+## Command-Line Options
+
+### Tags
+
+Targets can be labeled with tags. When `k8sfwd` is started with one or more space-separated
+`--tags` parameters, targets are filtered down to match the selection. If multiple values
+are specified (e.g. `--tags foo bar`), any matching tag results in the target being selected.
+If two tags are combined with a plus sign (e.g. `--tags foo+bar`) only targets matching both
+tags are selected.
+
+| Target tags             | `--tags` argument      | Selected |
+|-------------------------|------------------------|----------|
+| (none)                  | (none)                 | ✅ yes    |
+| (none)                  | `--tags some`          | ❌ no     |
+| `["foo", "bar", "baz"]` | (none)                 | ✅ yes    |
+| `["foo", "bar", "baz"]` | `--tags fubar`         | ❌ no     |
+| `["foo", "bar", "baz"]` | `--tags foo bar`       | ✅ yes    |
+| `["foo", "bar", "baz"]` | `--tags bar`           | ✅ yes    |
+| `["foo", "bar", "baz"]` | `--tags foo+baz`       | ✅ yes    |
+| `["foo", "bar", "baz"]` | `--tags foo+fubar`     | ❌ no     |
+| `["foo", "bar", "baz"]` | `--tags foo+baz fubar` | ✅ yes    |
+| `["fubar"]`             | `--tags foo+baz fubar` | ✅ yes    |
+   
+
 ## Configuration
 
 The configuration is provided as a YAML file. If no configuration file is specified when starting the application,
@@ -65,6 +89,8 @@ config:
 targets:
   - name: Test API (Staging)    # Optional, for display purposes.
     target: foo                 # The name of the resource to forward to.
+    tags:                       # Optional, for use with `--tags <tag1> <tag2>+<tag3>`
+      - integration
     type: service               # Can be service, deployment or pod.
     namespace: bar              # The namespace of the resource.
     context: null               # Optional; will default to current context.

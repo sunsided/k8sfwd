@@ -44,7 +44,7 @@ impl FromStr for Tag {
     }
 }
 
-#[derive(Debug, thiserror::Error)]
+#[derive(Debug, thiserror::Error, Eq, PartialEq)]
 pub enum FromStringError {
     #[error("Tag name must begin with an alphabetic character, got '{0}'")]
     MustStartAlphabetic(char),

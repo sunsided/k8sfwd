@@ -9,6 +9,7 @@ mod port_forward_configs;
 mod resource_type;
 mod retry_delay;
 mod tag;
+mod tag_selection;
 
 use lazy_static::lazy_static;
 use semver::Version;
@@ -20,6 +21,7 @@ pub use port_forward_configs::{FromYaml, FromYamlError, PortForwardConfigs};
 pub use resource_type::ResourceType;
 pub use retry_delay::RetryDelay;
 pub use tag::Tag;
+pub use tag_selection::{TagSelection, TagSelectionUtils};
 
 lazy_static! {
     pub static ref LOWEST_SUPPORTED_VERSION: Version = Version::new(0, 1, 0);

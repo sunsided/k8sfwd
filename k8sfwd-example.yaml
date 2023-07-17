@@ -19,6 +19,7 @@ targets:
     target: foo
     tags:
       - production
+      - google-cloud
     type: service
     namespace: bar
     context: production                 # Optional; will default to current context.
