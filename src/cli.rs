@@ -9,11 +9,11 @@ use std::path::PathBuf;
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
-    /// Sets a custom config file to load instead of .k8sfwd
+    /// Sets a custom config file to load instead of .k8sfwd.
     #[arg(short = 'f', long = "file", value_name = "FILE", value_parser = config_file_exists)]
     pub config: Option<PathBuf>,
 
-    /// Sets a custom path to the kubectl binary
+    /// Sets a custom path to the kubectl binary.
     #[arg(
         long,
         value_name = "FILE",
@@ -21,6 +21,10 @@ pub struct Cli {
         default_value = "kubectl"
     )]
     pub kubectl: PathBuf,
+
+    /// Specifies the tags of the targets to forward to.
+    #[arg(short, long, value_name = "TAGS", num_args = 1.., value_delimiter = ' ', allow_hyphen_values = false)]
+    pub tags: Vec<String>,
 }
 
 fn config_file_exists(s: &str) -> Result<PathBuf, String> {

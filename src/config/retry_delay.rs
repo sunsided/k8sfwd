@@ -15,7 +15,7 @@ impl RetryDelay {
 
 impl Default for RetryDelay {
     fn default() -> Self {
-        Self(5.0)
+        RetryDelay::from_secs(5.0)
     }
 }
 

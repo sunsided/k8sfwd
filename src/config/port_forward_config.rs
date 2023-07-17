@@ -9,7 +9,7 @@ pub struct PortForwardConfig {
     pub name: Option<String>,
     /// An optional set of tags to apply to the configuration.
     #[serde(default)]
-    pub tags: Vec<String>,
+    pub tags: Vec<String>, // TODO: Ensure tags use safe characters only
     /// The name of the kubeconfig context to use.
     pub context: Option<String>,
     /// The name of the kubeconfig cluster to use.
