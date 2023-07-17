@@ -9,7 +9,7 @@ use crate::config::{
 use crate::kubectl::{ChildEvent, Kubectl, RestartPolicy, StreamSource};
 use anyhow::Result;
 use clap::Parser;
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Display, Formatter};
 use std::fs::File;
 use std::path::PathBuf;
@@ -87,7 +87,7 @@ fn main() -> Result<ExitCode> {
 
     // Map out the config.
     println!("Forwarding to the following targets:");
-    let map = map_and_print_config(configs.targets);
+    let map = map_and_print_config(configs.targets, cli.tags.into_iter().collect());
     println!();
 
     // For each configuration, attempt a port-forward.
@@ -160,9 +160,16 @@ fn sanitize_config(
 ///
 /// This method also unifies the "current" context/cluster configuration with the
 /// actual values previously read from kubectl.
-fn map_and_print_config(configs: Vec<PortForwardConfig>) -> HashMap<ConfigId, PortForwardConfig> {
+fn map_and_print_config(
+    configs: Vec<PortForwardConfig>,
+    tags: HashSet<String>,
+) -> HashMap<ConfigId, PortForwardConfig> {
     let mut map: HashMap<ConfigId, PortForwardConfig> = HashMap::new();
     for (id, config) in configs.into_iter().enumerate() {
+        if !tags.is_empty() && tags.is_disjoint(&config.tags) {
+            continue;
+        }
+
         let id = ConfigId(id);
         let padding = " ".repeat(id.to_string().len());
 

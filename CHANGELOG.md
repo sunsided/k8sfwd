@@ -12,6 +12,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   be explicitly specified to `kubectl`. This should help when changing contexts while
   having a port-forwarding session open as intermittent errors will consistently
   produce the same forwarding rule regardless of the currently active context.
+- Added support for tags via the `--tags <tag1> <tag2> ...` command-line option. Only
+  targets matching any one of the specified tags will be forwarded.
 
 ### Fixed
 

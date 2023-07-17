@@ -5,6 +5,8 @@ config:
                                         # to re-establish a broken connection.
 targets:
   - name: Foo API (Staging)             # Optional, for display purposes.
+    tags:                               # Optional, allows to selectively forward using `--tags <tag1> <tag2>`
+      - integration
     target: foo-78b4c5d554-6z55j        # The name of the resource to forward to.
     type: pod                           # The type of resource, either "service", "deployment" or "pod".
     namespace: bar                      # The namespace of the resource; defaults to "default".
@@ -15,6 +17,8 @@ targets:
       - "8080"                          # Forward resource port 8080 to random local port.
   - # name: Fool API (Production)
     target: foo
+    tags:
+      - production
     type: service
     namespace: bar
     context: production                 # Optional; will default to current context.

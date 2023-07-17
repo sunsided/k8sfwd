@@ -1,6 +1,7 @@
 use crate::config::{Port, ResourceType};
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
+use std::collections::HashSet;
 use std::net::IpAddr;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -9,7 +10,7 @@ pub struct PortForwardConfig {
     pub name: Option<String>,
     /// An optional set of tags to apply to the configuration.
     #[serde(default)]
-    pub tags: Vec<String>, // TODO: Ensure tags use safe characters only
+    pub tags: HashSet<String>, // TODO: Ensure tags use safe characters only
     /// The name of the kubeconfig context to use.
     pub context: Option<String>,
     /// The name of the kubeconfig cluster to use.
@@ -94,7 +95,7 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(config.tags, ["foo", "bar"])
+        assert_eq!(config.tags, HashSet::from(["foo".into(), "bar".into()]))
     }
 
     #[test]
