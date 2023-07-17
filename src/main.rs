@@ -126,7 +126,10 @@ fn main() -> Result<ExitCode> {
 
 fn print_header(kubectl_version: String) {
     banner::Banner::println();
-    println!("k8s:fwd {}", env!("CARGO_PKG_VERSION"));
+    println!(
+        "k8s:fwd {} - a Kubernetes multi-cluster port forwarder",
+        env!("CARGO_PKG_VERSION")
+    );
     println!("Using kubectl version {kubectl_version}");
 }
 
