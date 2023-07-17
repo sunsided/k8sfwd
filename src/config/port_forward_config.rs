@@ -1,3 +1,4 @@
+use crate::config::tag::Tag;
 use crate::config::{Port, ResourceType};
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
@@ -10,7 +11,7 @@ pub struct PortForwardConfig {
     pub name: Option<String>,
     /// An optional set of tags to apply to the configuration.
     #[serde(default)]
-    pub tags: HashSet<String>, // TODO: Ensure tags use safe characters only
+    pub tags: HashSet<Tag>,
     /// The name of the kubeconfig context to use.
     pub context: Option<String>,
     /// The name of the kubeconfig cluster to use.
@@ -95,7 +96,10 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(config.tags, HashSet::from(["foo".into(), "bar".into()]))
+        assert_eq!(
+            config.tags,
+            HashSet::from([Tag::new_unchecked("foo"), Tag::new_unchecked("bar")])
+        )
     }
 
     #[test]
