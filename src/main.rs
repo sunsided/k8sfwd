@@ -8,7 +8,7 @@ use crate::config::{
     DEFAULT_CONFIG_FILE,
 };
 use crate::kubectl::{ChildEvent, Kubectl, RestartPolicy, StreamSource};
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::Parser;
 use just_a_tag::{MatchesAnyTagUnion, TagUnion};
 use std::collections::HashMap;
@@ -47,10 +47,10 @@ fn main() -> Result<ExitCode> {
     // TODO: Add home directory config. See "home" crate. Allow merging of configuration.
 
     // Attempt to find the configuration file in parent directories.
-    let (path, file) = match cli.config {
-        None => find_config_file()?,
-        Some(file) => (file.clone(), File::open(file)?),
-    };
+    let files = collect_config_files(cli.config)?;
+    let (path, file) = files.into_iter().next().expect("at least one file exists");
+
+    // TODO: load and sanitize each configuration file
 
     println!("Using config from {path}", path = path.display());
     println!();
@@ -273,7 +273,19 @@ fn start_output_loop_thread(out_rx: Receiver<ChildEvent>) -> JoinHandle<()> {
     print_thread
 }
 
-fn find_config_file() -> Result<(PathBuf, File), FindConfigFileError> {
+/// Enumerates all configuration files along the path hierarchy,
+/// in the user's home directory and the user's config directory, in that order.
+fn collect_config_files(
+    cli_file: Option<PathBuf>,
+) -> Result<Vec<(PathBuf, File)>, FindConfigFileError> {
+    let mut files = Vec::new();
+
+    // Try file from the CLI arguments.
+    if let Some(file) = cli_file {
+        // TODO: Attach file name to the error
+        files.push((file.clone(), File::open(file)?));
+    }
+
     // Look for config file in current_dir + it's parents -> $HOME -> $HOME/.config
     let config = PathBuf::from(DEFAULT_CONFIG_FILE);
     let working_dir = env::current_dir()?;
@@ -282,8 +294,10 @@ fn find_config_file() -> Result<(PathBuf, File), FindConfigFileError> {
     loop {
         let path = current_dir.join(&config);
         if let Ok(file) = File::open(&path) {
-            let path = pathdiff::diff_paths(&path, working_dir).unwrap_or(path);
-            return Ok((path, file));
+            let path = pathdiff::diff_paths(&path, &working_dir).unwrap_or(path);
+            files.push((path, file));
+        } else {
+            // TODO: Log error about invalid file
         }
 
         if let Some(parent) = current_dir.parent() {
@@ -297,7 +311,9 @@ fn find_config_file() -> Result<(PathBuf, File), FindConfigFileError> {
     if let Some(home_dir_path) = dirs::home_dir() {
         let path = home_dir_path.join(&config);
         if let Ok(file) = File::open(&path) {
-            return Ok((path, file));
+            files.push((path, file));
+        } else {
+            // TODO: Log error about invalid file
         }
     }
 
@@ -306,11 +322,17 @@ fn find_config_file() -> Result<(PathBuf, File), FindConfigFileError> {
     if let Some(config_dir_path) = dirs::config_dir() {
         let path = config_dir_path.join(&config);
         if let Ok(file) = File::open(&path) {
-            return Ok((path, file));
+            files.push((path, file));
+        } else {
+            // TODO: Log error about invalid file
         }
     }
 
-    Err(FindConfigFileError::FileNotFound)
+    if files.is_empty() {
+        Err(FindConfigFileError::FileNotFound)
+    } else {
+        Ok(files)
+    }
 }
 
 fn exitcode(code: exitcode::ExitCode) -> Result<ExitCode, anyhow::Error> {

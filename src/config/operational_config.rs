@@ -27,6 +27,8 @@ impl OperationalConfig {
             && self.retry_delay_sec.expect("value exists") < RetryDelay::NONE
         {
             self.retry_delay_sec = Some(RetryDelay::NONE);
+        } else {
+            self.retry_delay_sec = Some(RetryDelay::default())
         }
     }
 }
