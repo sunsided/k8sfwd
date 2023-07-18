@@ -8,9 +8,10 @@ use crate::config::{
     DEFAULT_CONFIG_FILE,
 };
 use crate::kubectl::{ChildEvent, Kubectl, RestartPolicy, StreamSource};
-use anyhow::{Context, Result};
+use anyhow::Result;
 use clap::Parser;
 use just_a_tag::{MatchesAnyTagUnion, TagUnion};
+use same_file::is_same_file;
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
@@ -48,11 +49,18 @@ fn main() -> Result<ExitCode> {
 
     // Attempt to find the configuration file in parent directories.
     let files = collect_config_files(cli.config)?;
-    let (path, file) = files.into_iter().next().expect("at least one file exists");
+    let num_configs = files.len();
 
     // TODO: load and sanitize each configuration file
+    let (path, file) = files.into_iter().next().expect("at least one file exists");
 
-    println!("Using config from {path}", path = path.display());
+    if num_configs == 1 {
+        println!("Using config from {path}", path = path.display());
+    } else {
+        println!("Using config from {num_configs} locations");
+        // TODO: Print all sources when --verbose is used
+    }
+
     println!();
 
     // Ensure configuration can be loaded.
@@ -279,6 +287,7 @@ fn collect_config_files(
     cli_file: Option<PathBuf>,
 ) -> Result<Vec<(PathBuf, File)>, FindConfigFileError> {
     let mut files = Vec::new();
+    let mut visited_paths = Vec::new();
 
     // Try file from the CLI arguments.
     if let Some(file) = cli_file {
@@ -292,6 +301,8 @@ fn collect_config_files(
 
     let mut current_dir = working_dir.clone();
     loop {
+        visited_paths.push(current_dir.clone());
+
         let path = current_dir.join(&config);
         if let Ok(file) = File::open(&path) {
             let path = pathdiff::diff_paths(&path, &working_dir).unwrap_or(path);
@@ -309,22 +320,28 @@ fn collect_config_files(
 
     // $HOME
     if let Some(home_dir_path) = dirs::home_dir() {
-        let path = home_dir_path.join(&config);
-        if let Ok(file) = File::open(&path) {
-            files.push((path, file));
-        } else {
-            // TODO: Log error about invalid file
+        if let Ok(false) = path_already_visited(&visited_paths, &home_dir_path) {
+            visited_paths.push(home_dir_path.clone());
+
+            let path = home_dir_path.join(&config);
+            if let Ok(file) = File::open(&path) {
+                files.push((path, file));
+            } else {
+                // TODO: Log error about invalid file
+            }
         }
     }
 
     // On Linux this will be $XDG_CONFIG_HOME
     // Or just $HOME/.config if the above is not present
     if let Some(config_dir_path) = dirs::config_dir() {
-        let path = config_dir_path.join(&config);
-        if let Ok(file) = File::open(&path) {
-            files.push((path, file));
-        } else {
-            // TODO: Log error about invalid file
+        if let Ok(false) = path_already_visited(&visited_paths, &config_dir_path) {
+            let path = config_dir_path.join(&config);
+            if let Ok(file) = File::open(&path) {
+                files.push((path, file));
+            } else {
+                // TODO: Log error about invalid file
+            }
         }
     }
 
@@ -333,6 +350,19 @@ fn collect_config_files(
     } else {
         Ok(files)
     }
+}
+
+/// Tests whether a path was already visited before.
+fn path_already_visited(visited_paths: &[PathBuf], test_path: &PathBuf) -> Result<bool> {
+    for path in visited_paths {
+        match is_same_file(path, &test_path) {
+            Ok(true) => return Ok(true),
+            Ok(false) => continue,
+            Err(e) => return Err(e.into()),
+        }
+    }
+
+    Ok(false)
 }
 
 fn exitcode(code: exitcode::ExitCode) -> Result<ExitCode, anyhow::Error> {
