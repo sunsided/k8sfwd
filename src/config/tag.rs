@@ -1,3 +1,7 @@
+// SPDX-FileCopyrightText: Copyright 2023 Markus Mayer
+// SPDX-License-Identifier: EUPL-1.2
+// SPDX-FileType: SOURCE
+
 use serde::{de, Deserialize, Deserializer};
 use std::ops::Deref;
 use std::str::FromStr;
