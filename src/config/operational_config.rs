@@ -39,14 +39,18 @@ mod tests {
 
     #[test]
     fn test_operational_default() {
-        let config = serde_yaml::from_str::<OperationalConfig>("").expect("configuration is valid");
-        assert_eq!(config.retry_delay_sec, RetryDelay::from_secs(5.0));
+        let mut config =
+            serde_yaml::from_str::<OperationalConfig>("").expect("configuration is valid");
+        assert_eq!(config.retry_delay_sec, None);
+
+        config.sanitize();
+        assert_eq!(config.retry_delay_sec, Some(RetryDelay::default()));
     }
 
     #[test]
     fn test_operational() {
         let config = serde_yaml::from_str::<OperationalConfig>(r#"retry_delay_sec: 3.14"#)
             .expect("configuration is valid");
-        assert_eq!(config.retry_delay_sec, RetryDelay::from_secs(3.14))
+        assert_eq!(config.retry_delay_sec, Some(RetryDelay::from_secs(3.14)))
     }
 }
