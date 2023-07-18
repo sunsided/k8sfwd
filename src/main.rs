@@ -262,19 +262,35 @@ fn run_output_loop(out_rx: Receiver<ChildEvent>) -> JoinHandle<()> {
 
 fn find_config_file() -> Result<(PathBuf, File), FindConfigFileError> {
     let config = PathBuf::from(DEFAULT_CONFIG_FILE);
-    let working_dir = env::current_dir()?;
-    let mut current_dir = working_dir.clone();
-    loop {
-        let path = current_dir.join(&config);
-        if let Ok(file) = File::open(&path) {
-            let path = pathdiff::diff_paths(&path, working_dir).unwrap_or(path);
-            return Ok((path, file));
-        }
 
-        if let Some(parent) = current_dir.parent() {
-            current_dir = PathBuf::from(parent);
-        } else {
-            break;
+    let working_dir = env::current_dir()?;
+    let mut target_dirs = vec![working_dir];
+
+    // On Linux this will be $XDG_CONFIG_HOME
+    // Or just $HOME/.config if the above is not present
+    if let Some(config_dir_path) = dirs::config_dir() {
+        target_dirs.push(config_dir_path)
+    }
+    // $HOME
+    if let Some(home_dir_path) = dirs::home_dir() {
+        target_dirs.push(home_dir_path)
+    }
+
+    // Look in current dir -> config -> home
+    for dir in target_dirs {
+        let mut current_dir = dir.clone();
+        loop {
+            let path = current_dir.join(&config);
+            if let Ok(file) = File::open(&path) {
+                let path = pathdiff::diff_paths(&path, dir).unwrap_or(path);
+                return Ok((path, file));
+            }
+
+            if let Some(parent) = current_dir.parent() {
+                current_dir = PathBuf::from(parent);
+            } else {
+                break;
+            }
         }
     }
 
