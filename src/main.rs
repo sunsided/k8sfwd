@@ -4,7 +4,8 @@
 
 use crate::cli::Cli;
 use crate::config::{
-    FromYaml, FromYamlError, PortForwardConfig, PortForwardConfigs, RetryDelay, DEFAULT_CONFIG_FILE,
+    FromYaml, FromYamlError, OperationalConfig, PortForwardConfig, PortForwardConfigs, RetryDelay,
+    DEFAULT_CONFIG_FILE,
 };
 use crate::kubectl::{ChildEvent, Kubectl, RestartPolicy, StreamSource};
 use anyhow::Result;
@@ -76,6 +77,8 @@ fn main() -> Result<ExitCode> {
         return exitcode(exitcode::CONFIG);
     }
 
+    // TODO: Merge configuration files' "targets" sections by name (topmost entry wins), otherwise append.
+
     // Early exit.
     if configs.targets.is_empty() {
         eprintln!("No targets configured.");
@@ -92,6 +95,8 @@ fn main() -> Result<ExitCode> {
 
     sanitize_config(&mut configs, current_context, current_cluster, &kubectl);
 
+    let operational = configs.config.expect("operational config exists");
+
     // Map out the config.
     println!("Forwarding to the following targets:");
     let map = map_and_print_config(configs.targets, cli.tags);
@@ -106,12 +111,8 @@ fn main() -> Result<ExitCode> {
     let mut handles = Vec::new();
     for (id, fwd_config) in map {
         // TODO: Fail all or fail some?
-        let handle = kubectl.port_forward(
-            id,
-            configs.config.clone(),
-            fwd_config.clone(),
-            out_tx.clone(),
-        )?;
+        let handle =
+            kubectl.port_forward(id, operational.clone(), fwd_config.clone(), out_tx.clone())?;
         handles.push(handle);
     }
 
@@ -141,8 +142,10 @@ fn sanitize_config(
     current_cluster: Option<String>,
     kubectl: &Kubectl,
 ) {
-    if config.config.retry_delay_sec < RetryDelay::NONE {
-        config.config.retry_delay_sec = RetryDelay::NONE;
+    if let Some(operational) = &mut config.config {
+        operational.sanitize();
+    } else {
+        config.config = Some(OperationalConfig::default());
     }
 
     for config in config.targets.iter_mut() {

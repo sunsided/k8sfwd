@@ -15,8 +15,7 @@ use std::io::Read;
 pub struct PortForwardConfigs {
     pub version: Version,
     #[serde(default)]
-    pub config: OperationalConfig,
-    // TODO: Add mappings of cluster names; useful for merged hierarchical configs
+    pub config: Option<OperationalConfig>,
     #[serde(default)]
     pub targets: Vec<PortForwardConfig>,
 }

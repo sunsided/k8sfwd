@@ -5,11 +5,30 @@
 use crate::config::RetryDelay;
 use serde::Deserialize;
 
-#[derive(Debug, Clone, Deserialize, Default)]
+#[derive(Debug, Clone, Deserialize)]
 pub struct OperationalConfig {
     /// The number of seconds to delay retries for.
-    #[serde(default)]
-    pub retry_delay_sec: RetryDelay,
+    pub retry_delay_sec: Option<RetryDelay>,
+    // TODO: Add mappings of cluster names; useful for merged hierarchical configs
+}
+
+impl Default for OperationalConfig {
+    fn default() -> Self {
+        Self {
+            retry_delay_sec: Some(RetryDelay::default()),
+        }
+    }
+}
+
+impl OperationalConfig {
+    /// Ensures that values, if set, are valid (or sanitized such that they are valid).
+    pub fn sanitize(&mut self) {
+        if self.retry_delay_sec.is_some()
+            && self.retry_delay_sec.expect("value exists") < RetryDelay::NONE
+        {
+            self.retry_delay_sec = Some(RetryDelay::NONE);
+        }
+    }
 }
 
 #[cfg(test)]
