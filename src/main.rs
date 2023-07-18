@@ -87,7 +87,7 @@ fn main() -> Result<ExitCode> {
 
     // Create channels for communication.
     let (out_tx, out_rx) = mpsc::channel();
-    let print_thread = run_output_loop(out_rx);
+    let print_thread = start_output_loop_thread(out_rx);
 
     // Sanitize default values.
     let current_context = kubectl.current_context()?;
@@ -234,7 +234,7 @@ fn map_and_print_config(
     map
 }
 
-fn run_output_loop(out_rx: Receiver<ChildEvent>) -> JoinHandle<()> {
+fn start_output_loop_thread(out_rx: Receiver<ChildEvent>) -> JoinHandle<()> {
     let print_thread = thread::spawn(move || {
         while let Ok(event) = out_rx.recv() {
             match event {
