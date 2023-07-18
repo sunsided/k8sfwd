@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: EUPL-1.2
 // SPDX-FileType: SOURCE
 
-use crate::config::{OperationalConfig, PortForwardConfig, RetryDelay};
-use crate::ConfigId;
+use crate::config::{ConfigId, OperationalConfig, PortForwardConfig, RetryDelay};
 use serde::Deserialize;
 use std::env::current_dir;
 use std::io::{BufRead, Read};

@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: EUPL-1.2
 // SPDX-FileType: SOURCE
 
+mod config_id;
 mod operational_config;
 mod port;
 mod port_forward_config;
@@ -16,6 +17,8 @@ use std::fs::File;
 use std::path::PathBuf;
 use std::{env, io};
 
+use crate::kubectl::Kubectl;
+pub use config_id::ConfigId;
 pub use operational_config::OperationalConfig;
 pub use port::Port;
 pub use port_forward_config::PortForwardConfig;
@@ -29,6 +32,55 @@ lazy_static! {
 }
 
 pub static DEFAULT_CONFIG_FILE: &'static str = ".k8sfwd";
+
+/// This method also unifies the "current" context/cluster configuration with the
+/// actual values previously read from kubectl.
+pub fn sanitize_config(
+    config: &mut PortForwardConfigs,
+    current_context: String,
+    current_cluster: Option<String>,
+    kubectl: &Kubectl,
+) {
+    if let Some(operational) = &mut config.config {
+        operational.sanitize();
+    } else {
+        config.config = Some(OperationalConfig::default());
+    }
+
+    for config in config.targets.iter_mut() {
+        autofill_context_and_cluster(config, kubectl, &current_context, &current_cluster);
+    }
+}
+
+/// Fills the context and cluster name depending on which values are missing.
+fn autofill_context_and_cluster(
+    config: &mut PortForwardConfig,
+    kubectl: &Kubectl,
+    current_context: &String,
+    current_cluster: &Option<String>,
+) {
+    match (&mut config.context, &mut config.cluster) {
+        (Some(_context), Some(_cluster)) => { /* nothing to do */ }
+        (Some(context), None) => match kubectl.cluster_from_context(Some(&context)) {
+            Ok(Some(cluster)) => {
+                config.cluster = Some(cluster);
+            }
+            Ok(None) => {}
+            Err(_) => {}
+        },
+        (None, Some(cluster)) => match kubectl.context_from_cluster(Some(&cluster)) {
+            Ok(Some(context)) => {
+                config.context = Some(context);
+            }
+            Ok(None) => {}
+            Err(_) => {}
+        },
+        (None, None) => {
+            config.context = Some(current_context.clone());
+            config.cluster = current_cluster.clone();
+        }
+    }
+}
 
 /// Enumerates all configuration files along the path hierarchy,
 /// in the user's home directory and the user's config directory, in that order.

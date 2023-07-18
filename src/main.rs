@@ -4,15 +4,14 @@
 
 use crate::cli::Cli;
 use crate::config::{
-    collect_config_files, FromYaml, FromYamlError, OperationalConfig, PortForwardConfig,
-    PortForwardConfigs, RetryDelay,
+    collect_config_files, sanitize_config, ConfigId, FromYaml, FromYamlError, PortForwardConfig,
+    RetryDelay,
 };
 use crate::kubectl::{ChildEvent, Kubectl, RestartPolicy, StreamSource};
 use anyhow::Result;
 use clap::Parser;
 use just_a_tag::{MatchesAnyTagUnion, TagUnion};
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
 use std::process::ExitCode;
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
@@ -42,12 +41,12 @@ fn main() -> Result<ExitCode> {
 
     // TODO: Watch the configuration file, stop missing bits and start new ones. (Hash the entries?)
 
-    // TODO: Add home directory config. See "home" crate. Allow merging of configuration.
-
     // Attempt to find the configuration file in parent directories.
     let files = collect_config_files(cli.config)?;
     let num_configs = files.len();
 
+    // TODO: Merge configuration from different files.
+    // TODO: Merge configuration files' "targets" sections by name (topmost entry wins), otherwise append.
     // TODO: load and sanitize each configuration file
     let (path, file) = files.into_iter().next().expect("at least one file exists");
 
@@ -81,8 +80,6 @@ fn main() -> Result<ExitCode> {
         );
         return exitcode(exitcode::CONFIG);
     }
-
-    // TODO: Merge configuration files' "targets" sections by name (topmost entry wins), otherwise append.
 
     // Early exit.
     if configs.targets.is_empty() {
@@ -139,55 +136,6 @@ fn print_header(kubectl_version: String) {
     println!("Using kubectl version {kubectl_version}");
 }
 
-/// This method also unifies the "current" context/cluster configuration with the
-/// actual values previously read from kubectl.
-fn sanitize_config(
-    config: &mut PortForwardConfigs,
-    current_context: String,
-    current_cluster: Option<String>,
-    kubectl: &Kubectl,
-) {
-    if let Some(operational) = &mut config.config {
-        operational.sanitize();
-    } else {
-        config.config = Some(OperationalConfig::default());
-    }
-
-    for config in config.targets.iter_mut() {
-        autofill_context_and_cluster(config, kubectl, &current_context, &current_cluster);
-    }
-}
-
-/// Fills the context and cluster name depending on which values are missing.
-fn autofill_context_and_cluster(
-    config: &mut PortForwardConfig,
-    kubectl: &Kubectl,
-    current_context: &String,
-    current_cluster: &Option<String>,
-) {
-    match (&mut config.context, &mut config.cluster) {
-        (Some(_context), Some(_cluster)) => { /* nothing to do */ }
-        (Some(context), None) => match kubectl.cluster_from_context(Some(&context)) {
-            Ok(Some(cluster)) => {
-                config.cluster = Some(cluster);
-            }
-            Ok(None) => {}
-            Err(_) => {}
-        },
-        (None, Some(cluster)) => match kubectl.context_from_cluster(Some(&cluster)) {
-            Ok(Some(context)) => {
-                config.context = Some(context);
-            }
-            Ok(None) => {}
-            Err(_) => {}
-        },
-        (None, None) => {
-            config.context = Some(current_context.clone());
-            config.cluster = current_cluster.clone();
-        }
-    }
-}
-
 /// Prints out the details about the current configuration.
 ///
 /// This method also unifies the "current" context/cluster configuration with the
@@ -202,7 +150,7 @@ fn map_and_print_config(
             continue;
         }
 
-        let id = ConfigId(id);
+        let id = ConfigId::new(id);
         let padding = " ".repeat(id.to_string().len());
 
         if let Some(name) = &config.name {
@@ -281,13 +229,4 @@ fn start_output_loop_thread(out_rx: Receiver<ChildEvent>) -> JoinHandle<()> {
 fn exitcode(code: exitcode::ExitCode) -> Result<ExitCode, anyhow::Error> {
     debug_assert!(code <= u8::MAX as i32);
     Ok(ExitCode::from(code as u8))
-}
-
-#[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Ord, Eq, Hash)]
-pub struct ConfigId(usize);
-
-impl Display for ConfigId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "#{}", self.0)
-    }
 }
