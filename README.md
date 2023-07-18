@@ -74,8 +74,8 @@ tags are selected.
 ## Configuration
 
 The configuration is provided as a YAML file. If no configuration file is specified when starting the application,
-it will recursively look for a `.k8sfwd` file in the current directory hierarchy. If a file is specified on
-program launch, that configuration is used instead.
+it will recursively look for a `.k8sfwd` file in the current directory hierarchy, your home directory and your
+configuration directory, in that order. If a file is specified on program launch, that configuration is used instead.
 
 See [`k8sfwd-example.yaml`](k8sfwd-example.yaml) for an example.
 
