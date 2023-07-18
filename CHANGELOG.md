@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Added
+
+- [#4](https://github.com/sunsided/k8sfwd/pull/4):
+  Added support for configuration files in the user's home and config directories.
+
 ## [0.2.0] - 2023-07-17
 
 ### Added
