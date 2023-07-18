@@ -17,6 +17,7 @@ pub struct PortForwardConfigs {
     #[serde(default)]
     pub config: OperationalConfig,
     // TODO: Add mappings of cluster names; useful for merged hierarchical configs
+    #[serde(default)]
     pub targets: Vec<PortForwardConfig>,
 }
 
