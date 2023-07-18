@@ -269,7 +269,7 @@ fn find_config_file() -> Result<(PathBuf, File), FindConfigFileError> {
     loop {
         let path = current_dir.join(&config);
         if let Ok(file) = File::open(&path) {
-            let path = pathdiff::diff_paths(&path, current_dir).unwrap_or(path);
+            let path = pathdiff::diff_paths(&path, working_dir).unwrap_or(path);
             return Ok((path, file));
         }
 
@@ -278,25 +278,25 @@ fn find_config_file() -> Result<(PathBuf, File), FindConfigFileError> {
         } else {
             break;
         }
+    }
 
-        // $HOME
-        if let Some(home_dir_path) = dirs::home_dir() {
-            let path = home_dir_path.join(&config);
-
-            if let Ok(file) = File::open(&path) {
-                return Ok((path, file));
-            }
-        }
-
-        // On Linux this will be $XDG_CONFIG_HOME
-        // Or just $HOME/.config if the above is not present
-        if let Some(config_dir_path) = dirs::config_dir() {
-            let path = config_dir_path.join(&config);
-            if let Ok(file) = File::open(&path) {
-                return Ok((path, file));
-            }
+    // $HOME
+    if let Some(home_dir_path) = dirs::home_dir() {
+        let path = home_dir_path.join(&config);
+        if let Ok(file) = File::open(&path) {
+            return Ok((path, file));
         }
     }
+
+    // On Linux this will be $XDG_CONFIG_HOME
+    // Or just $HOME/.config if the above is not present
+    if let Some(config_dir_path) = dirs::config_dir() {
+        let path = config_dir_path.join(&config);
+        if let Ok(file) = File::open(&path) {
+            return Ok((path, file));
+        }
+    }
+
     Err(FindConfigFileError::FileNotFound)
 }
 
