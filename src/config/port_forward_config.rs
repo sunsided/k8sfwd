@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: EUPL-1.2
 // SPDX-FileType: SOURCE
 
-use crate::config::tag::Tag;
 use crate::config::{Port, ResourceType};
+use just_a_tag::Tag;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 use std::collections::HashSet;
@@ -102,7 +102,7 @@ mod tests {
 
         assert_eq!(
             config.tags,
-            HashSet::from([Tag::new_unchecked("foo"), Tag::new_unchecked("bar")])
+            HashSet::from([Tag::new("foo"), Tag::new("bar")])
         )
     }
 

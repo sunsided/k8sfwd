@@ -207,6 +207,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "af150ab688ff2122fcef229be89cb50dd66af9e01a4ff320cc137eecc9bacc38"
 
 [[package]]
+name = "just-a-tag"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6ff07c4f0be06e7d63f451fbb229bebc4e8b84feacb6ec3257ff34588edbba46"
+dependencies = [
+ "serde",
+]
+
+[[package]]
 name = "k8sfwd"
 version = "0.2.0"
 dependencies = [
@@ -215,6 +224,7 @@ dependencies = [
  "dotenvy",
  "exitcode",
  "indoc",
+ "just-a-tag",
  "lazy_static",
  "pathdiff",
  "semver",

@@ -4,12 +4,12 @@
 
 use crate::cli::Cli;
 use crate::config::{
-    FromYaml, FromYamlError, PortForwardConfig, PortForwardConfigs, RetryDelay, TagSelection,
-    TagSelectionUtils, DEFAULT_CONFIG_FILE,
+    FromYaml, FromYamlError, PortForwardConfig, PortForwardConfigs, RetryDelay, DEFAULT_CONFIG_FILE,
 };
 use crate::kubectl::{ChildEvent, Kubectl, RestartPolicy, StreamSource};
 use anyhow::Result;
 use clap::Parser;
+use just_a_tag::{MatchesAnyTagUnion, TagUnion};
 use std::collections::HashMap;
 use std::fmt::{Display, Formatter};
 use std::fs::File;
@@ -176,11 +176,11 @@ fn sanitize_config(
 /// actual values previously read from kubectl.
 fn map_and_print_config(
     configs: Vec<PortForwardConfig>,
-    tags: Vec<TagSelection>,
+    tags: Vec<TagUnion>,
 ) -> HashMap<ConfigId, PortForwardConfig> {
     let mut map: HashMap<ConfigId, PortForwardConfig> = HashMap::new();
     for (id, config) in configs.into_iter().enumerate() {
-        if !tags.is_empty() && !tags.matches_tags(&config.tags) {
+        if !tags.is_empty() && !tags.matches_set(&config.tags) {
             continue;
         }
 
