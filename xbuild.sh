@@ -10,3 +10,9 @@ echo "Building for Linux (musl)"
 # rustup target add x86_64-unknown-linux-musl
 cargo auditable build --profile=release-lto --target=x86_64-unknown-linux-musl
 ls -lah target/x86_64-unknown-linux-musl/release-lto/k8sfwd
+
+# TODO: Add OSX support
+# echo "Building for Apple Darwin"
+# # rustup target add x86_64-apple-darwin
+# cargo auditable build --profile=release-lto --target=x86_64-apple-darwin
+# ls -lah target/x86_64-apple-darwin/release-lto/k8sfwd
