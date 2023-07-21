@@ -10,14 +10,15 @@ mod port_forward_config;
 mod port_forward_configs;
 mod resource_type;
 mod retry_delay;
+mod visit_tracker;
 
 use lazy_static::lazy_static;
-use same_file::is_same_file;
 use semver::Version;
 use std::fs::File;
 use std::path::PathBuf;
 use std::{env, io};
 
+use crate::config::visit_tracker::VisitTracker;
 use crate::kubectl::Kubectl;
 pub use config_id::ConfigId;
 pub use merge_with::MergeWith;
@@ -105,27 +106,26 @@ pub fn collect_config_files(
     cli_file: Vec<PathBuf>,
 ) -> Result<Vec<(ConfigMeta, File)>, FindConfigFileError> {
     let mut files = Vec::new();
-    let mut visited_paths = Vec::new();
+    let mut visited_paths = VisitTracker::default();
 
     let load_config_only = !cli_file.is_empty();
 
     // Try file from the CLI arguments.
     for path in cli_file.into_iter() {
         let file = File::open(&path)?;
-        if let Some(directory) = path.canonicalize()?.parent() {
-            let path_buf = directory.to_path_buf();
-            visited_paths.push(path_buf);
+        // Ensure we don't specify the same file multiple times.
+        // We also return any errors since these files are explicitly specified.
+        if !visited_paths.track_file_path(&path)? {
+            // TODO: Attach file name to the error
+            files.push((
+                ConfigMeta {
+                    path,
+                    auto_detected: false,
+                    load_config_only: false,
+                },
+                file,
+            ));
         }
-
-        // TODO: Attach file name to the error
-        files.push((
-            ConfigMeta {
-                path,
-                auto_detected: false,
-                load_config_only: false,
-            },
-            file,
-        ));
     }
 
     // Look for config file in current_dir + it's parents -> $HOME -> $HOME/.config
@@ -137,9 +137,7 @@ pub fn collect_config_files(
     loop {
         levels_deep += 1;
         // Ignore the path if it was already specified by explicit arguments.
-        if let Ok(false) = path_already_visited(&visited_paths, &current_dir) {
-            visited_paths.push(current_dir.clone().canonicalize()?);
-
+        if let Ok(false) = visited_paths.track_directory(&current_dir) {
             let path = current_dir.join(&config);
             if let Ok(file) = File::open(&path) {
                 // Provide an easier to read path by keeping it relative if we
@@ -172,9 +170,7 @@ pub fn collect_config_files(
 
     // $HOME
     if let Some(home_dir_path) = dirs::home_dir() {
-        if let Ok(false) = path_already_visited(&visited_paths, &home_dir_path) {
-            visited_paths.push(home_dir_path.clone().canonicalize()?);
-
+        if let Ok(false) = visited_paths.track_directory(&home_dir_path) {
             let path = home_dir_path.join(&config);
             if let Ok(file) = File::open(&path) {
                 files.push((
@@ -194,7 +190,7 @@ pub fn collect_config_files(
     // On Linux this will be $XDG_CONFIG_HOME
     // Or just $HOME/.config if the above is not present
     if let Some(config_dir_path) = dirs::config_dir() {
-        if let Ok(false) = path_already_visited(&visited_paths, &config_dir_path) {
+        if let Ok(false) = visited_paths.track_directory(&config_dir_path) {
             let path = config_dir_path.join(&config);
             if let Ok(file) = File::open(&path) {
                 files.push((
@@ -216,19 +212,6 @@ pub fn collect_config_files(
     } else {
         Ok(files)
     }
-}
-
-/// Tests whether a path was already visited before.
-fn path_already_visited(visited_paths: &[PathBuf], test_path: &PathBuf) -> Result<bool, io::Error> {
-    for path in visited_paths {
-        match is_same_file(path, &test_path) {
-            Ok(true) => return Ok(true),
-            Ok(false) => continue,
-            Err(e) => return Err(e),
-        }
-    }
-
-    Ok(false)
 }
 
 #[derive(Debug, thiserror::Error)]
