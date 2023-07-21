@@ -11,6 +11,8 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Added support for configuration files in the user's home and config directories.
 - [#5](https://github.com/sunsided/k8sfwd/pull/5):
   Source files from the path hierarchy and special directories are now merged.
+- [#7](https://github.com/sunsided/k8sfwd/pull/7):
+  Multiple config files can now be specified by repeating the `--file` argument.
 
 ### Changed
 

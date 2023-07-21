@@ -75,7 +75,7 @@ tags are selected.
 
 The configuration is provided as a YAML file. 
 
-- If a file is specified on program launch via the `--file` argument, its configuration is loaded.
+- If one or more files are specified on program launch via the `--file` argument(s), their configuration is loaded.
 - If no configuration file is specified, `k8sfwd` will recursively look for a `.k8sfwd` file in 
   - the current directory hierarchy, 
   - your home directory and 
