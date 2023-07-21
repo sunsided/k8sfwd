@@ -83,12 +83,20 @@ fn main() -> Result<ExitCode> {
         }
         n => {
             if cli.verbose {
-                println!("Using config from {n} locations:");
+                println!("Merging configs from {n} locations:");
                 for (config, _) in &configs {
-                    println!("- {path}", path = config.path.display());
+                    println!(
+                        "- {path}{mode}",
+                        path = config.path.display(),
+                        mode = if config.auto_detected {
+                            " (auto-detected)"
+                        } else {
+                            ""
+                        }
+                    );
                 }
             } else {
-                println!("Using config from {n} locations");
+                println!("Merging configs from {n} locations");
             }
 
             let (_, mut merged) = configs.pop().expect("there is at least one config");
