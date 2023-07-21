@@ -4,8 +4,8 @@
 
 use crate::cli::Cli;
 use crate::config::{
-    collect_config_files, sanitize_config, ConfigId, FromYaml, FromYamlError, PortForwardConfig,
-    RetryDelay,
+    collect_config_files, sanitize_config, ConfigId, FromYaml, FromYamlError, MergeWith,
+    PortForwardConfig, PortForwardConfigs, RetryDelay,
 };
 use crate::kubectl::{ChildEvent, Kubectl, RestartPolicy, StreamSource};
 use anyhow::Result;
@@ -41,48 +41,63 @@ fn main() -> Result<ExitCode> {
 
     // TODO: Watch the configuration file, stop missing bits and start new ones. (Hash the entries?)
 
-    // Attempt to find the configuration file in parent directories.
-    let files = collect_config_files(cli.config)?;
-    let num_configs = files.len();
-
     // TODO: Merge configuration from different files.
     // TODO: Merge configuration files' "targets" sections by name (topmost entry wins), otherwise append.
     // TODO: load and sanitize each configuration file
-    let (path, file) = files.into_iter().next().expect("at least one file exists");
+    // Attempt to find the configuration file in parent directories and ensure configuration can be loaded.
+    let mut configs = Vec::new();
+    for (path, file) in collect_config_files(cli.config)? {
+        // TODO: Allow skipping of incompatible version (--ignore-errors?)
+        let config = match file.into_configuration() {
+            Ok(configs) => configs,
+            Err(FromYamlError::InvalidConfiguration(e)) => {
+                eprintln!("Invalid configuration: {e}");
+                return exitcode(exitcode::CONFIG);
+            }
+            Err(FromYamlError::FileReadFailed(e)) => {
+                eprintln!("Failed to read configuration file: {e}");
+                return exitcode(exitcode::UNAVAILABLE);
+            }
+        };
 
-    if num_configs == 1 {
-        println!("Using config from {path}", path = path.display());
-    } else {
-        println!("Using config from {num_configs} locations");
-        // TODO: Print all sources when --verbose is used
-    }
-
-    println!();
-
-    // Ensure configuration can be loaded.
-    let mut configs = match file.into_configuration() {
-        Ok(configs) => configs,
-        Err(FromYamlError::InvalidConfiguration(e)) => {
-            eprintln!("Invalid configuration: {e}");
+        // Ensure version is supported.
+        // TODO: Allow skipping of incompatible version (--ignore-errors?)
+        if !config.is_supported_version() {
+            eprintln!(
+                "Configuration version {loaded} is not supported by this application",
+                loaded = config.version
+            );
             return exitcode(exitcode::CONFIG);
         }
-        Err(FromYamlError::FileReadFailed(e)) => {
-            eprintln!("Failed to read configuration file: {e}");
+
+        configs.push((path, config));
+    }
+
+    let mut config = match configs.len() {
+        0 => {
+            eprintln!("No valid configuration files found");
             return exitcode(exitcode::UNAVAILABLE);
+        }
+        1 => {
+            let (path, config) = configs.into_iter().next().expect("one entry exists");
+            println!("Using config from {path}", path = path.display());
+            config
+        }
+        n => {
+            // TODO: Print all sources when --verbose is used
+            println!("Using config from {n} locations");
+            let mut merged = PortForwardConfigs::default();
+            while let Some((_path, config)) = configs.pop() {
+                merged.merge_with(&config);
+            }
+            merged
         }
     };
 
-    // Ensure version is supported.
-    if !configs.is_supported_version() {
-        eprintln!(
-            "Configuration version {loaded} is not supported by this application",
-            loaded = configs.version
-        );
-        return exitcode(exitcode::CONFIG);
-    }
+    println!();
 
     // Early exit.
-    if configs.targets.is_empty() {
+    if config.targets.is_empty() {
         eprintln!("No targets configured.");
         return exitcode(exitcode::CONFIG);
     }
@@ -95,13 +110,13 @@ fn main() -> Result<ExitCode> {
     let current_context = kubectl.current_context()?;
     let current_cluster = kubectl.current_cluster()?;
 
-    sanitize_config(&mut configs, current_context, current_cluster, &kubectl);
+    sanitize_config(&mut config, current_context, current_cluster, &kubectl);
 
-    let operational = configs.config.expect("operational config exists");
+    let operational = config.config.expect("operational config exists");
 
     // Map out the config.
     println!("Forwarding to the following targets:");
-    let map = map_and_print_config(configs.targets, cli.tags);
+    let map = map_and_print_config(config.targets, cli.tags);
     if map.is_empty() {
         eprintln!("No targets selected.");
         return exitcode(exitcode::OK);

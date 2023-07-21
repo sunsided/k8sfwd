@@ -3,6 +3,7 @@
 // SPDX-FileType: SOURCE
 
 mod config_id;
+mod merge_with;
 mod operational_config;
 mod port;
 mod port_forward_config;
@@ -14,11 +15,13 @@ use lazy_static::lazy_static;
 use same_file::is_same_file;
 use semver::Version;
 use std::fs::File;
+use std::hash::Hash;
 use std::path::PathBuf;
 use std::{env, io};
 
 use crate::kubectl::Kubectl;
 pub use config_id::ConfigId;
+pub use merge_with::MergeWith;
 pub use operational_config::OperationalConfig;
 pub use port::Port;
 pub use port_forward_config::PortForwardConfig;

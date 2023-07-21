@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: EUPL-1.2
 // SPDX-FileType: SOURCE
 
+use crate::config::MergeWith;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
 
@@ -12,6 +13,16 @@ pub struct Port {
     pub local: Option<u16>,
     /// The remote port to forward to.
     pub remote: u16,
+}
+
+impl MergeWith for Vec<Port> {
+    fn merge_with(&mut self, other: &Self) {
+        if other.is_empty() {
+            return;
+        }
+
+        todo!("port merging not implemented")
+    }
 }
 
 impl<'de> Deserialize<'de> for Port {

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: EUPL-1.2
 // SPDX-FileType: SOURCE
 
-use crate::config::{Port, ResourceType};
+use crate::config::{MergeWith, Port, ResourceType};
 use just_a_tag::Tag;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
@@ -33,6 +33,36 @@ pub struct PortForwardConfig {
     pub target: String,
     /// The port to forward.
     pub ports: Vec<Port>,
+}
+
+impl MergeWith for PortForwardConfig {
+    fn merge_with(&mut self, other: &Self) {
+        self.name.merge_with(&other.name);
+        self.tags.merge_with(&other.tags);
+        self.context.merge_with(&other.context);
+        self.cluster.merge_with(&other.cluster);
+        self.merge_listen_addrs(&other.listen_addrs);
+        self.namespace = other.namespace.clone();
+        self.r#type = other.r#type.clone();
+        self.target = other.target.clone();
+        self.ports.merge_with(&other.ports);
+    }
+}
+
+impl MergeWith for Vec<PortForwardConfig> {
+    fn merge_with(&mut self, other: &Self) {
+        if other.is_empty() {
+            return;
+        }
+
+        todo!("target merging not implemented")
+    }
+}
+
+impl PortForwardConfig {
+    fn merge_listen_addrs(&mut self, other: &[String]) {
+        todo!("merging of listen addresses")
+    }
 }
 
 fn default_namespace() -> String {

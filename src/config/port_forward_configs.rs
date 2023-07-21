@@ -3,7 +3,8 @@
 // SPDX-FileType: SOURCE
 
 use crate::config::{
-    OperationalConfig, PortForwardConfig, HIGHEST_SUPPORTED_VERSION, LOWEST_SUPPORTED_VERSION,
+    MergeWith, OperationalConfig, PortForwardConfig, HIGHEST_SUPPORTED_VERSION,
+    LOWEST_SUPPORTED_VERSION,
 };
 use semver::Version;
 use serde::Deserialize;
@@ -18,6 +19,33 @@ pub struct PortForwardConfigs {
     pub config: Option<OperationalConfig>,
     #[serde(default)]
     pub targets: Vec<PortForwardConfig>,
+}
+
+impl MergeWith for PortForwardConfigs {
+    fn merge_with(&mut self, other: &Self) {
+        self.version = other.version.clone();
+
+        match &mut self.config {
+            None => self.config = other.config.clone(),
+            Some(config) => config.merge_with(&other.config),
+        }
+
+        if self.targets.is_empty() {
+            self.targets = other.targets.clone();
+        } else {
+            self.targets.merge_with(&other.targets);
+        }
+    }
+}
+
+impl Default for PortForwardConfigs {
+    fn default() -> Self {
+        Self {
+            version: Version::new(0, 0, 0),
+            config: None,
+            targets: Vec::new(),
+        }
+    }
 }
 
 pub trait FromYaml {

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: EUPL-1.2
 // SPDX-FileType: SOURCE
 
-use crate::config::RetryDelay;
+use crate::config::{MergeWith, RetryDelay};
 use serde::Deserialize;
 
 #[derive(Debug, Clone, Deserialize)]
@@ -10,6 +10,22 @@ pub struct OperationalConfig {
     /// The number of seconds to delay retries for.
     pub retry_delay_sec: Option<RetryDelay>,
     // TODO: Add mappings of cluster names; useful for merged hierarchical configs
+}
+
+impl MergeWith for OperationalConfig {
+    fn merge_with(&mut self, other: &Self) {
+        if self.retry_delay_sec.is_none() {
+            self.retry_delay_sec = other.retry_delay_sec;
+        }
+    }
+}
+
+impl MergeWith<Option<OperationalConfig>> for OperationalConfig {
+    fn merge_with(&mut self, other: &Option<Self>) {
+        if let Some(other) = other {
+            self.merge_with(other);
+        }
+    }
 }
 
 impl Default for OperationalConfig {
