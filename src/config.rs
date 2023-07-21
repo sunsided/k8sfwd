@@ -169,48 +169,65 @@ pub fn collect_config_files(
     }
 
     // $HOME
-    if let Some(home_dir_path) = dirs::home_dir() {
-        if let Ok(false) = visited_paths.track_directory(&home_dir_path) {
-            let path = home_dir_path.join(&config);
-            if let Ok(file) = File::open(&path) {
-                files.push((
-                    ConfigMeta {
-                        path,
-                        auto_detected: true,
-                        load_config_only,
-                    },
-                    file,
-                ));
-            } else {
-                // TODO: Log error about invalid file
-            }
-        }
-    }
+    handle_special_path(
+        dirs::home_dir(),
+        &mut files,
+        &mut visited_paths,
+        load_config_only,
+        &config,
+    )
+    .ok();
 
     // On Linux this will be $XDG_CONFIG_HOME
     // Or just $HOME/.config if the above is not present
-    if let Some(config_dir_path) = dirs::config_dir() {
-        if let Ok(false) = visited_paths.track_directory(&config_dir_path) {
-            let path = config_dir_path.join(&config);
-            if let Ok(file) = File::open(&path) {
-                files.push((
-                    ConfigMeta {
-                        path,
-                        auto_detected: true,
-                        load_config_only,
-                    },
-                    file,
-                ));
-            } else {
-                // TODO: Log error about invalid file
-            }
-        }
-    }
+    handle_special_path(
+        dirs::config_dir(),
+        &mut files,
+        &mut visited_paths,
+        load_config_only,
+        &config,
+    )
+    .ok();
 
     if files.is_empty() {
         Err(FindConfigFileError::FileNotFound)
     } else {
         Ok(files)
+    }
+}
+
+/// Processes a "special" path like the home or config directory.
+/// These paths already have canonical names.
+fn handle_special_path(
+    dir: Option<PathBuf>,
+    files: &mut Vec<(ConfigMeta, File)>,
+    visited_paths: &mut VisitTracker,
+    load_config_only: bool,
+    config: &PathBuf,
+) -> Result<bool, std::io::Error> {
+    let path = match dir {
+        Some(path) => path,
+        None => return Ok(false),
+    };
+
+    if !visited_paths.track_directory(&path)? {
+        let path = path.join(&config);
+        if let Ok(file) = File::open(&path) {
+            files.push((
+                ConfigMeta {
+                    path,
+                    auto_detected: true,
+                    load_config_only,
+                },
+                file,
+            ));
+        } else {
+            // TODO: Log error about invalid file
+        }
+
+        Ok(false)
+    } else {
+        Ok(true)
     }
 }
 
