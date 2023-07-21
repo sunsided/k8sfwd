@@ -9,6 +9,14 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 - [#4](https://github.com/sunsided/k8sfwd/pull/4):
   Added support for configuration files in the user's home and config directories.
+- [#5](https://github.com/sunsided/k8sfwd/pull/5):
+  Source files from the path hierarchy and special directories are now merged.
+
+### Changed
+
+- The path to the provided or detected source file(s) is now kept relative to the
+  current working directory only if it is close. If the file is too many layers
+  of nesting away, the canonical path is shown instead of a relative one.
 
 ## [0.2.0] - 2023-07-17
 

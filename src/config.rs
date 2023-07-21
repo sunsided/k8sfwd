@@ -101,6 +101,7 @@ fn autofill_context_and_cluster(
 /// Enumerates all configuration files along the path hierarchy,
 /// in the user's home directory and the user's config directory, in that order.
 pub fn collect_config_files(
+    // TODO: Allow more than file
     cli_file: Option<PathBuf>,
 ) -> Result<Vec<(ConfigMeta, File)>, FindConfigFileError> {
     let mut files = Vec::new();
@@ -126,12 +127,21 @@ pub fn collect_config_files(
     let working_dir = env::current_dir()?;
 
     let mut current_dir = working_dir.clone();
+    let mut levels_deep = 0;
     loop {
+        levels_deep += 1;
         visited_paths.push(current_dir.clone());
 
         let path = current_dir.join(&config);
         if let Ok(file) = File::open(&path) {
-            let path = pathdiff::diff_paths(&path, &working_dir).unwrap_or(path);
+            // Provide an easier to read path by keeping it relative if we
+            // are close to the current working directory.
+            let path = if levels_deep <= 4 {
+                pathdiff::diff_paths(&path, &working_dir).unwrap_or(path)
+            } else {
+                path.canonicalize()?
+            };
+
             files.push((
                 ConfigMeta {
                     path,

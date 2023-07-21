@@ -49,6 +49,7 @@ impl PartialEq for PortForwardConfig {
 
 impl MergeWith for PortForwardConfig {
     fn merge_with(&mut self, other: &Self) {
+        self.source_file = other.source_file.clone();
         self.name.merge_with(&other.name);
         self.tags.merge_with(&other.tags);
         self.context.merge_with(&other.context);

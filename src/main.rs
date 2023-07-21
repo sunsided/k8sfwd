@@ -46,8 +46,6 @@ fn main() -> Result<ExitCode> {
 
     // TODO: When configs are specified by path, still load parent configuration (ignoring their targets).
     for (source, file) in collect_config_files(cli.config)? {
-        let path = source.path.canonicalize()?;
-
         // TODO: Allow skipping of incompatible version (--ignore-errors?)
         let config = match file.into_configuration(&source) {
             Ok(configs) => configs,
@@ -71,7 +69,7 @@ fn main() -> Result<ExitCode> {
             return exitcode(exitcode::CONFIG);
         }
 
-        configs.push((path, config));
+        configs.push((source, config));
     }
 
     let mut config = match configs.len() {
@@ -80,8 +78,8 @@ fn main() -> Result<ExitCode> {
             return exitcode(exitcode::UNAVAILABLE);
         }
         1 => {
-            let (path, config) = configs.into_iter().next().expect("one entry exists");
-            println!("Using config from {path}", path = path.display());
+            let (source, config) = configs.into_iter().next().expect("one entry exists");
+            println!("Using config from {path}", path = source.path.display());
             config
         }
         n => {
