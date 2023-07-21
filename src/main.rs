@@ -5,7 +5,7 @@
 use crate::cli::Cli;
 use crate::config::{
     collect_config_files, sanitize_config, ConfigId, FromYaml, FromYamlError, MergeWith,
-    PortForwardConfig, PortForwardConfigs, RetryDelay,
+    PortForwardConfig, RetryDelay,
 };
 use crate::kubectl::{ChildEvent, Kubectl, RestartPolicy, StreamSource};
 use anyhow::Result;
@@ -41,15 +41,19 @@ fn main() -> Result<ExitCode> {
 
     // TODO: Watch the configuration file, stop missing bits and start new ones. (Hash the entries?)
 
-    // TODO: Merge configuration from different files.
-    // TODO: Merge configuration files' "targets" sections by name (topmost entry wins), otherwise append.
-    // TODO: load and sanitize each configuration file
     // Attempt to find the configuration file in parent directories and ensure configuration can be loaded.
     let mut configs = Vec::new();
+
+    // TODO: When configs are specified by path, still load parent configuration (ignoring their targets).
     for (path, file) in collect_config_files(cli.config)? {
+        let path = path.canonicalize()?;
+
         // TODO: Allow skipping of incompatible version (--ignore-errors?)
         let config = match file.into_configuration() {
-            Ok(configs) => configs,
+            Ok(mut configs) => {
+                configs.set_source_file(path.clone());
+                configs
+            }
             Err(FromYamlError::InvalidConfiguration(e)) => {
                 eprintln!("Invalid configuration: {e}");
                 return exitcode(exitcode::CONFIG);
@@ -86,7 +90,7 @@ fn main() -> Result<ExitCode> {
         n => {
             // TODO: Print all sources when --verbose is used
             println!("Using config from {n} locations");
-            let mut merged = PortForwardConfigs::default();
+            let (_, mut merged) = configs.pop().expect("there is at least one config");
             while let Some((_path, config)) = configs.pop() {
                 merged.merge_with(&config);
             }
@@ -196,6 +200,15 @@ fn map_and_print_config(
             "{padding} cluster: {}",
             config.cluster.as_deref().unwrap_or("(implicit)")
         );
+
+        // Print the currently targeted cluster.
+        // TODO: Print only if --verbose
+        if let Some(source_file) = &config.source_file {
+            println!(
+                "{padding} source:  {source_file}",
+                source_file = source_file.display()
+            );
+        }
 
         map.insert(id, config);
     }

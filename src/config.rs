@@ -15,7 +15,6 @@ use lazy_static::lazy_static;
 use same_file::is_same_file;
 use semver::Version;
 use std::fs::File;
-use std::hash::Hash;
 use std::path::PathBuf;
 use std::{env, io};
 
@@ -31,7 +30,7 @@ pub use retry_delay::RetryDelay;
 
 lazy_static! {
     pub static ref LOWEST_SUPPORTED_VERSION: Version = Version::new(0, 1, 0);
-    pub static ref HIGHEST_SUPPORTED_VERSION: Version = Version::new(0, 1, 0);
+    pub static ref HIGHEST_SUPPORTED_VERSION: Version = Version::new(0, 3, 0);
 }
 
 pub static DEFAULT_CONFIG_FILE: &'static str = ".k8sfwd";

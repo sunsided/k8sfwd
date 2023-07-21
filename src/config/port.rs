@@ -5,9 +5,10 @@
 use crate::config::MergeWith;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
+use std::collections::HashSet;
 
 /// A port to forward.
-#[derive(Debug, Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
 pub struct Port {
     /// The local port to forward to.
     pub local: Option<u16>,
@@ -21,7 +22,9 @@ impl MergeWith for Vec<Port> {
             return;
         }
 
-        todo!("port merging not implemented")
+        let set: HashSet<Port> = HashSet::from_iter(self.iter().cloned());
+        let other_set = HashSet::from_iter(other.iter().cloned());
+        *self = Vec::from_iter(&mut set.union(&other_set).into_iter().cloned());
     }
 }
 

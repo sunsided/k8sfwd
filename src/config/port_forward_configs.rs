@@ -11,6 +11,7 @@ use serde::Deserialize;
 use std::fs::File;
 use std::io;
 use std::io::Read;
+use std::path::PathBuf;
 
 #[derive(Debug, Deserialize)]
 pub struct PortForwardConfigs {
@@ -19,6 +20,14 @@ pub struct PortForwardConfigs {
     pub config: Option<OperationalConfig>,
     #[serde(default)]
     pub targets: Vec<PortForwardConfig>,
+}
+
+impl PortForwardConfigs {
+    pub fn set_source_file(&mut self, file: PathBuf) {
+        for target in &mut self.targets {
+            target.set_source_file(file.clone());
+        }
+    }
 }
 
 impl MergeWith for PortForwardConfigs {
@@ -34,16 +43,6 @@ impl MergeWith for PortForwardConfigs {
             self.targets = other.targets.clone();
         } else {
             self.targets.merge_with(&other.targets);
-        }
-    }
-}
-
-impl Default for PortForwardConfigs {
-    fn default() -> Self {
-        Self {
-            version: Version::new(0, 0, 0),
-            config: None,
-            targets: Vec::new(),
         }
     }
 }

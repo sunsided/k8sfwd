@@ -6,13 +6,19 @@ use crate::config::{MergeWith, Port, ResourceType};
 use just_a_tag::Tag;
 use serde::de::Error;
 use serde::{Deserialize, Deserializer};
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::net::IpAddr;
+use std::path::PathBuf;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct PortForwardConfig {
+    /// Designates the file from which this configuration was loaded.
+    #[serde(skip_serializing, skip_deserializing)]
+    pub source_file: Option<PathBuf>,
     /// An optional name used to refer to this configuration.
     pub name: Option<String>,
+    // TODO: Add alias for filtering
+    // TODO: Add explicit/implicit configurations
     /// An optional set of tags to apply to the configuration.
     #[serde(default)]
     pub tags: HashSet<Tag>,
@@ -22,7 +28,7 @@ pub struct PortForwardConfig {
     pub cluster: Option<String>,
     /// The addresses or host names to listen on; must be an IP address or `localhost`.
     #[serde(default, deserialize_with = "deserialize_listen_addrs")]
-    pub listen_addrs: Vec<String>,
+    pub listen_addrs: Vec<String>, // TODO: Make HashSet
     /// The namespace to forward to, e.g. `default`.
     #[serde(default = "default_namespace")]
     pub namespace: String,
@@ -32,7 +38,13 @@ pub struct PortForwardConfig {
     /// The name of the resource to forward to.
     pub target: String,
     /// The port to forward.
-    pub ports: Vec<Port>,
+    pub ports: Vec<Port>, // TODO: Make HashSet
+}
+
+impl PartialEq for PortForwardConfig {
+    fn eq(&self, other: &Self) -> bool {
+        self.target == other.target
+    }
 }
 
 impl MergeWith for PortForwardConfig {
@@ -55,13 +67,32 @@ impl MergeWith for Vec<PortForwardConfig> {
             return;
         }
 
-        todo!("target merging not implemented")
+        // TODO: Ensure sort order is stable.
+
+        let mut map = HashMap::<String, PortForwardConfig>::new();
+        for cfg in self.drain(0..) {
+            map.insert(cfg.target.clone(), cfg);
+        }
+
+        for cfg in other {
+            map.entry(cfg.target.clone())
+                .and_modify(|current| current.merge_with(&cfg))
+                .or_insert(cfg.clone());
+        }
+
+        *self = Vec::from_iter(map.into_iter().map(|(_k, v)| v));
     }
 }
 
 impl PortForwardConfig {
+    pub fn set_source_file(&mut self, file: PathBuf) {
+        self.source_file = Some(file);
+    }
+
     fn merge_listen_addrs(&mut self, other: &[String]) {
-        todo!("merging of listen addresses")
+        let set: HashSet<String> = HashSet::from_iter(self.listen_addrs.drain(0..));
+        let other_set = HashSet::from_iter(other.iter().cloned());
+        self.listen_addrs = Vec::from_iter(&mut set.union(&other_set).into_iter().cloned());
     }
 }
 
