@@ -2,8 +2,7 @@
 // SPDX-License-Identifier: EUPL-1.2
 // SPDX-FileType: SOURCE
 
-use crate::config::{OperationalConfig, PortForwardConfig, RetryDelay};
-use crate::ConfigId;
+use crate::config::{ConfigId, OperationalConfig, PortForwardConfig, RetryDelay};
 use serde::Deserialize;
 use std::env::current_dir;
 use std::io::{BufRead, Read};
@@ -160,11 +159,13 @@ impl Kubectl {
         let current_dir = self.current_dir.clone();
 
         let child_thread = thread::spawn(move || {
+            let retry_delay_sec = config.retry_delay_sec.expect("retry_delay_sec exists");
+
             let mut bootstrap = true;
             'new_process: loop {
                 // Only delay start at the second iteration.
-                if !bootstrap && config.retry_delay_sec > RetryDelay::NONE {
-                    thread::sleep(config.retry_delay_sec.into());
+                if !bootstrap && retry_delay_sec > RetryDelay::NONE {
+                    thread::sleep(retry_delay_sec.into());
                 }
                 bootstrap = false;
 
@@ -247,7 +248,7 @@ impl Kubectl {
                     .send(ChildEvent::Exit(
                         id,
                         status,
-                        RestartPolicy::WillRestartIn(config.retry_delay_sec),
+                        RestartPolicy::WillRestartIn(retry_delay_sec),
                     ))
                     .ok();
             }

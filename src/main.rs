@@ -4,21 +4,19 @@
 
 use crate::cli::Cli;
 use crate::config::{
-    FromYaml, FromYamlError, PortForwardConfig, PortForwardConfigs, RetryDelay, DEFAULT_CONFIG_FILE,
+    collect_config_files, sanitize_config, ConfigId, FromYaml, FromYamlError, MergeWith,
+    PortForwardConfig, RetryDelay,
 };
 use crate::kubectl::{ChildEvent, Kubectl, RestartPolicy, StreamSource};
 use anyhow::Result;
 use clap::Parser;
 use just_a_tag::{MatchesAnyTagUnion, TagUnion};
 use std::collections::HashMap;
-use std::fmt::{Display, Formatter};
-use std::fs::File;
-use std::path::PathBuf;
 use std::process::ExitCode;
 use std::sync::mpsc;
 use std::sync::mpsc::Receiver;
 use std::thread::JoinHandle;
-use std::{env, io, thread};
+use std::{env, thread};
 
 mod banner;
 mod cli;
@@ -43,58 +41,80 @@ fn main() -> Result<ExitCode> {
 
     // TODO: Watch the configuration file, stop missing bits and start new ones. (Hash the entries?)
 
-    // TODO: Add home directory config. See "home" crate. Allow merging of configuration.
+    // Attempt to find the configuration file in parent directories and ensure configuration can be loaded.
+    let mut configs = Vec::new();
 
-    // Attempt to find the configuration file in parent directories.
-    let (path, file) = match cli.config {
-        None => find_config_file()?,
-        Some(file) => (file.clone(), File::open(file)?),
-    };
+    for (source, file) in collect_config_files(cli.config)? {
+        // TODO: Allow skipping of incompatible version (--ignore-errors?)
+        let config = match file.into_configuration(&source) {
+            Ok(configs) => configs,
+            Err(FromYamlError::InvalidConfiguration(e)) => {
+                eprintln!("Invalid configuration: {e}");
+                return exitcode(exitcode::CONFIG);
+            }
+            Err(FromYamlError::FileReadFailed(e)) => {
+                eprintln!("Failed to read configuration file: {e}");
+                return exitcode(exitcode::UNAVAILABLE);
+            }
+        };
 
-    println!("Using config from {path}", path = path.display());
-    println!();
-
-    // Ensure configuration can be loaded.
-    let mut configs = match file.into_configuration() {
-        Ok(configs) => configs,
-        Err(FromYamlError::InvalidConfiguration(e)) => {
-            eprintln!("Invalid configuration: {e}");
+        // Ensure version is supported.
+        // TODO: Allow skipping of incompatible version (--ignore-errors?)
+        if !config.is_supported_version() {
+            eprintln!(
+                "Configuration version {loaded} is not supported by this application",
+                loaded = config.version
+            );
             return exitcode(exitcode::CONFIG);
         }
-        Err(FromYamlError::FileReadFailed(e)) => {
-            eprintln!("Failed to read configuration file: {e}");
+
+        configs.push((source, config));
+    }
+
+    let mut config = match configs.len() {
+        0 => {
+            eprintln!("No valid configuration files found");
             return exitcode(exitcode::UNAVAILABLE);
+        }
+        1 => {
+            let (source, config) = configs.into_iter().next().expect("one entry exists");
+            println!("Using config from {path}", path = source.path.display());
+            config
+        }
+        n => {
+            // TODO: Print all sources when --verbose is used
+            println!("Using config from {n} locations");
+            let (_, mut merged) = configs.pop().expect("there is at least one config");
+            while let Some((_path, config)) = configs.pop() {
+                merged.merge_with(&config);
+            }
+            merged
         }
     };
 
-    // Ensure version is supported.
-    if !configs.is_supported_version() {
-        eprintln!(
-            "Configuration version {loaded} is not supported by this application",
-            loaded = configs.version
-        );
-        return exitcode(exitcode::CONFIG);
-    }
+    println!();
 
     // Early exit.
-    if configs.targets.is_empty() {
+    if config.targets.is_empty() {
         eprintln!("No targets configured.");
         return exitcode(exitcode::CONFIG);
     }
 
     // Create channels for communication.
     let (out_tx, out_rx) = mpsc::channel();
-    let print_thread = run_output_loop(out_rx);
+    let print_thread = start_output_loop_thread(out_rx);
 
     // Sanitize default values.
     let current_context = kubectl.current_context()?;
     let current_cluster = kubectl.current_cluster()?;
 
-    sanitize_config(&mut configs, current_context, current_cluster, &kubectl);
+    sanitize_config(&mut config, current_context, current_cluster, &kubectl);
+
+    let operational = config.config.expect("operational config exists");
 
     // Map out the config.
     println!("Forwarding to the following targets:");
-    let map = map_and_print_config(configs.targets, cli.tags);
+    let map = map_and_print_config(config.targets, cli.tags);
     if map.is_empty() {
         eprintln!("No targets selected.");
         return exitcode(exitcode::OK);
@@ -106,12 +126,8 @@ fn main() -> Result<ExitCode> {
     let mut handles = Vec::new();
     for (id, fwd_config) in map {
         // TODO: Fail all or fail some?
-        let handle = kubectl.port_forward(
-            id,
-            configs.config.clone(),
-            fwd_config.clone(),
-            out_tx.clone(),
-        )?;
+        let handle =
+            kubectl.port_forward(id, operational.clone(), fwd_config.clone(), out_tx.clone())?;
         handles.push(handle);
     }
 
@@ -133,43 +149,6 @@ fn print_header(kubectl_version: String) {
     println!("Using kubectl version {kubectl_version}");
 }
 
-/// This method also unifies the "current" context/cluster configuration with the
-/// actual values previously read from kubectl.
-fn sanitize_config(
-    config: &mut PortForwardConfigs,
-    current_context: String,
-    current_cluster: Option<String>,
-    kubectl: &Kubectl,
-) {
-    if config.config.retry_delay_sec < RetryDelay::NONE {
-        config.config.retry_delay_sec = RetryDelay::NONE;
-    }
-
-    for config in config.targets.iter_mut() {
-        match (&mut config.context, &mut config.cluster) {
-            (Some(_context), Some(_cluster)) => { /* nothing to do */ }
-            (Some(context), None) => match kubectl.cluster_from_context(Some(&context)) {
-                Ok(Some(cluster)) => {
-                    config.cluster = Some(cluster);
-                }
-                Ok(None) => {}
-                Err(_) => {}
-            },
-            (None, Some(cluster)) => match kubectl.context_from_cluster(Some(&cluster)) {
-                Ok(Some(context)) => {
-                    config.context = Some(context);
-                }
-                Ok(None) => {}
-                Err(_) => {}
-            },
-            (None, None) => {
-                config.context = Some(current_context.clone());
-                config.cluster = current_cluster.clone();
-            }
-        }
-    }
-}
-
 /// Prints out the details about the current configuration.
 ///
 /// This method also unifies the "current" context/cluster configuration with the
@@ -184,7 +163,7 @@ fn map_and_print_config(
             continue;
         }
 
-        let id = ConfigId(id);
+        let id = ConfigId::new(id);
         let padding = " ".repeat(id.to_string().len());
 
         if let Some(name) = &config.name {
@@ -216,12 +195,21 @@ fn map_and_print_config(
             config.cluster.as_deref().unwrap_or("(implicit)")
         );
 
+        // Print the currently targeted cluster.
+        // TODO: Print only if --verbose
+        if let Some(source_file) = &config.source_file {
+            println!(
+                "{padding} source:  {source_file}",
+                source_file = source_file.display()
+            );
+        }
+
         map.insert(id, config);
     }
     map
 }
 
-fn run_output_loop(out_rx: Receiver<ChildEvent>) -> JoinHandle<()> {
+fn start_output_loop_thread(out_rx: Receiver<ChildEvent>) -> JoinHandle<()> {
     let print_thread = thread::spawn(move || {
         while let Ok(event) = out_rx.recv() {
             match event {
@@ -260,64 +248,7 @@ fn run_output_loop(out_rx: Receiver<ChildEvent>) -> JoinHandle<()> {
     print_thread
 }
 
-fn find_config_file() -> Result<(PathBuf, File), FindConfigFileError> {
-    // Look for config file in current_dir + it's parents -> $HOME -> $HOME/.config
-    let config = PathBuf::from(DEFAULT_CONFIG_FILE);
-    let working_dir = env::current_dir()?;
-
-    let mut current_dir = working_dir.clone();
-    loop {
-        let path = current_dir.join(&config);
-        if let Ok(file) = File::open(&path) {
-            let path = pathdiff::diff_paths(&path, working_dir).unwrap_or(path);
-            return Ok((path, file));
-        }
-
-        if let Some(parent) = current_dir.parent() {
-            current_dir = PathBuf::from(parent);
-        } else {
-            break;
-        }
-    }
-
-    // $HOME
-    if let Some(home_dir_path) = dirs::home_dir() {
-        let path = home_dir_path.join(&config);
-        if let Ok(file) = File::open(&path) {
-            return Ok((path, file));
-        }
-    }
-
-    // On Linux this will be $XDG_CONFIG_HOME
-    // Or just $HOME/.config if the above is not present
-    if let Some(config_dir_path) = dirs::config_dir() {
-        let path = config_dir_path.join(&config);
-        if let Ok(file) = File::open(&path) {
-            return Ok((path, file));
-        }
-    }
-
-    Err(FindConfigFileError::FileNotFound)
-}
-
 fn exitcode(code: exitcode::ExitCode) -> Result<ExitCode, anyhow::Error> {
     debug_assert!(code <= u8::MAX as i32);
     Ok(ExitCode::from(code as u8))
-}
-
-#[derive(Debug, thiserror::Error)]
-enum FindConfigFileError {
-    #[error("No config file could be found in the path hierarchy")]
-    FileNotFound,
-    #[error(transparent)]
-    InvalidWorkingDirectory(#[from] io::Error),
-}
-
-#[derive(Debug, Copy, Clone, PartialOrd, PartialEq, Ord, Eq, Hash)]
-pub struct ConfigId(usize);
-
-impl Display for ConfigId {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "#{}", self.0)
-    }
 }
