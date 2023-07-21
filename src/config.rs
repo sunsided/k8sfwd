@@ -35,6 +35,20 @@ lazy_static! {
 
 pub static DEFAULT_CONFIG_FILE: &'static str = ".k8sfwd";
 
+/// Describes the source and handling of a configuration.
+#[derive(Debug)]
+pub struct ConfigMeta {
+    /// The path to the file.
+    pub path: PathBuf,
+    /// Whether the path to the file automatically detected (if `true`) or
+    /// explicitly specified on the command-line (if `false`).
+    pub auto_detected: bool,
+    /// Whether only to load the [`OperationalConfig`] from the file
+    /// (if `true`, e.g. when automatically detected in presence of an explicitly
+    /// specified file), or to load everything (if `false`).
+    pub load_config_only: bool,
+}
+
 /// This method also unifies the "current" context/cluster configuration with the
 /// actual values previously read from kubectl.
 pub fn sanitize_config(
@@ -88,14 +102,23 @@ fn autofill_context_and_cluster(
 /// in the user's home directory and the user's config directory, in that order.
 pub fn collect_config_files(
     cli_file: Option<PathBuf>,
-) -> Result<Vec<(PathBuf, File)>, FindConfigFileError> {
+) -> Result<Vec<(ConfigMeta, File)>, FindConfigFileError> {
     let mut files = Vec::new();
     let mut visited_paths = Vec::new();
+
+    let load_config_only = cli_file.is_some();
 
     // Try file from the CLI arguments.
     if let Some(file) = cli_file {
         // TODO: Attach file name to the error
-        files.push((file.clone(), File::open(file)?));
+        files.push((
+            ConfigMeta {
+                path: file.clone(),
+                auto_detected: false,
+                load_config_only: false,
+            },
+            File::open(file)?,
+        ));
     }
 
     // Look for config file in current_dir + it's parents -> $HOME -> $HOME/.config
@@ -109,7 +132,14 @@ pub fn collect_config_files(
         let path = current_dir.join(&config);
         if let Ok(file) = File::open(&path) {
             let path = pathdiff::diff_paths(&path, &working_dir).unwrap_or(path);
-            files.push((path, file));
+            files.push((
+                ConfigMeta {
+                    path,
+                    auto_detected: true,
+                    load_config_only,
+                },
+                file,
+            ));
         } else {
             // TODO: Log error about invalid file
         }
@@ -128,7 +158,14 @@ pub fn collect_config_files(
 
             let path = home_dir_path.join(&config);
             if let Ok(file) = File::open(&path) {
-                files.push((path, file));
+                files.push((
+                    ConfigMeta {
+                        path,
+                        auto_detected: true,
+                        load_config_only,
+                    },
+                    file,
+                ));
             } else {
                 // TODO: Log error about invalid file
             }
@@ -141,7 +178,14 @@ pub fn collect_config_files(
         if let Ok(false) = path_already_visited(&visited_paths, &config_dir_path) {
             let path = config_dir_path.join(&config);
             if let Ok(file) = File::open(&path) {
-                files.push((path, file));
+                files.push((
+                    ConfigMeta {
+                        path,
+                        auto_detected: true,
+                        load_config_only,
+                    },
+                    file,
+                ));
             } else {
                 // TODO: Log error about invalid file
             }

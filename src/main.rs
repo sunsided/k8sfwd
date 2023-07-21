@@ -45,15 +45,12 @@ fn main() -> Result<ExitCode> {
     let mut configs = Vec::new();
 
     // TODO: When configs are specified by path, still load parent configuration (ignoring their targets).
-    for (path, file) in collect_config_files(cli.config)? {
-        let path = path.canonicalize()?;
+    for (source, file) in collect_config_files(cli.config)? {
+        let path = source.path.canonicalize()?;
 
         // TODO: Allow skipping of incompatible version (--ignore-errors?)
-        let config = match file.into_configuration() {
-            Ok(mut configs) => {
-                configs.set_source_file(path.clone());
-                configs
-            }
+        let config = match file.into_configuration(&source) {
+            Ok(configs) => configs,
             Err(FromYamlError::InvalidConfiguration(e)) => {
                 eprintln!("Invalid configuration: {e}");
                 return exitcode(exitcode::CONFIG);

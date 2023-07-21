@@ -3,7 +3,7 @@
 // SPDX-FileType: SOURCE
 
 use crate::config::{
-    MergeWith, OperationalConfig, PortForwardConfig, HIGHEST_SUPPORTED_VERSION,
+    ConfigMeta, MergeWith, OperationalConfig, PortForwardConfig, HIGHEST_SUPPORTED_VERSION,
     LOWEST_SUPPORTED_VERSION,
 };
 use semver::Version;
@@ -48,14 +48,25 @@ impl MergeWith for PortForwardConfigs {
 }
 
 pub trait FromYaml {
-    fn into_configuration(self) -> Result<PortForwardConfigs, FromYamlError>;
+    fn into_configuration(self, source: &ConfigMeta) -> Result<PortForwardConfigs, FromYamlError>;
 }
 
 impl FromYaml for File {
-    fn into_configuration(mut self) -> Result<PortForwardConfigs, FromYamlError> {
+    fn into_configuration(
+        mut self,
+        source: &ConfigMeta,
+    ) -> Result<PortForwardConfigs, FromYamlError> {
         let mut contents = String::new();
         self.read_to_string(&mut contents)?;
-        Ok(serde_yaml::from_str(&contents)?)
+        let mut config: PortForwardConfigs = serde_yaml::from_str(&contents)?;
+
+        if source.load_config_only {
+            config.targets.clear();
+        } else {
+            config.set_source_file(source.path.clone());
+        }
+
+        Ok(config)
     }
 }
 
