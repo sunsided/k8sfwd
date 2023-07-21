@@ -82,8 +82,15 @@ fn main() -> Result<ExitCode> {
             config
         }
         n => {
-            // TODO: Print all sources when --verbose is used
-            println!("Using config from {n} locations");
+            if cli.verbose {
+                println!("Using config from {n} locations:");
+                for (config, _) in &configs {
+                    println!("- {path}", path = config.path.display());
+                }
+            } else {
+                println!("Using config from {n} locations");
+            }
+
             let (_, mut merged) = configs.pop().expect("there is at least one config");
             while let Some((_path, config)) = configs.pop() {
                 merged.merge_with(&config);
@@ -114,7 +121,7 @@ fn main() -> Result<ExitCode> {
 
     // Map out the config.
     println!("Forwarding to the following targets:");
-    let map = map_and_print_config(config.targets, cli.tags);
+    let map = map_and_print_config(config.targets, cli.tags, cli.verbose);
     if map.is_empty() {
         eprintln!("No targets selected.");
         return exitcode(exitcode::OK);
@@ -156,6 +163,7 @@ fn print_header(kubectl_version: String) {
 fn map_and_print_config(
     configs: Vec<PortForwardConfig>,
     tags: Vec<TagUnion>,
+    verbose: bool,
 ) -> HashMap<ConfigId, PortForwardConfig> {
     let mut map: HashMap<ConfigId, PortForwardConfig> = HashMap::new();
     for (id, config) in configs.into_iter().enumerate() {
@@ -196,12 +204,13 @@ fn map_and_print_config(
         );
 
         // Print the currently targeted cluster.
-        // TODO: Print only if --verbose
-        if let Some(source_file) = &config.source_file {
-            println!(
-                "{padding} source:  {source_file}",
-                source_file = source_file.display()
-            );
+        if verbose {
+            if let Some(source_file) = &config.source_file {
+                println!(
+                    "{padding} source:  {source_file}",
+                    source_file = source_file.display()
+                );
+            }
         }
 
         map.insert(id, config);

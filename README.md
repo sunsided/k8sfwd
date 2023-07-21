@@ -22,9 +22,9 @@ Depending on your configuration, you'll be greeted with something along the line
 ██╔═██╗░██╔══██╗░╚═══██╗░██╗░██╔══╝░░░████╔═████║░██║░░██║
 ██║░╚██╗╚█████╔╝██████╔╝░╚═╝░██║░░░░░░╚██╔╝░╚██╔╝░██████╔╝
 ╚═╝░░╚═╝░╚════╝░╚═════╝░░░░░░╚═╝░░░░░░░╚═╝░░░╚═╝░░╚═════╝
-k8s:fwd 0.1.0
+k8s:fwd 0.2.0 - a Kubernetes multi-cluster port forwarder
 Using kubectl version v1.24.12-dispatcher
-Using config from .k8sfwd
+Using config from 2 locations
 
 Forwarding to the following targets:
 #0 Items API (Staging)

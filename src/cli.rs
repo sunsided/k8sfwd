@@ -26,6 +26,10 @@ pub struct Cli {
     /// Specifies the tags of the targets to forward to.
     #[arg(short, long, value_name = "TAGS", num_args = 1.., value_delimiter = ' ', allow_hyphen_values = false)]
     pub tags: Vec<TagUnion>,
+
+    /// Enables verbose log outputs.
+    #[arg(long)]
+    pub verbose: bool,
 }
 
 fn config_file_exists(s: &str) -> Result<PathBuf, String> {
