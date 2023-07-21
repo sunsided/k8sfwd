@@ -44,7 +44,6 @@ fn main() -> Result<ExitCode> {
     // Attempt to find the configuration file in parent directories and ensure configuration can be loaded.
     let mut configs = Vec::new();
 
-    // TODO: When configs are specified by path, still load parent configuration (ignoring their targets).
     for (source, file) in collect_config_files(cli.config)? {
         // TODO: Allow skipping of incompatible version (--ignore-errors?)
         let config = match file.into_configuration(&source) {
