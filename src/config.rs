@@ -102,23 +102,29 @@ fn autofill_context_and_cluster(
 /// in the user's home directory and the user's config directory, in that order.
 pub fn collect_config_files(
     // TODO: Allow more than file
-    cli_file: Option<PathBuf>,
+    cli_file: Vec<PathBuf>,
 ) -> Result<Vec<(ConfigMeta, File)>, FindConfigFileError> {
     let mut files = Vec::new();
     let mut visited_paths = Vec::new();
 
-    let load_config_only = cli_file.is_some();
+    let load_config_only = !cli_file.is_empty();
 
     // Try file from the CLI arguments.
-    if let Some(file) = cli_file {
+    for path in cli_file.into_iter() {
+        let file = File::open(&path)?;
+        if let Some(directory) = path.canonicalize()?.parent() {
+            let path_buf = directory.to_path_buf();
+            visited_paths.push(path_buf);
+        }
+
         // TODO: Attach file name to the error
         files.push((
             ConfigMeta {
-                path: file.clone(),
+                path,
                 auto_detected: false,
                 load_config_only: false,
             },
-            File::open(file)?,
+            file,
         ));
     }
 
@@ -130,28 +136,31 @@ pub fn collect_config_files(
     let mut levels_deep = 0;
     loop {
         levels_deep += 1;
-        visited_paths.push(current_dir.clone());
+        // Ignore the path if it was already specified by explicit arguments.
+        if let Ok(false) = path_already_visited(&visited_paths, &current_dir) {
+            visited_paths.push(current_dir.clone().canonicalize()?);
 
-        let path = current_dir.join(&config);
-        if let Ok(file) = File::open(&path) {
-            // Provide an easier to read path by keeping it relative if we
-            // are close to the current working directory.
-            let path = if levels_deep <= 4 {
-                pathdiff::diff_paths(&path, &working_dir).unwrap_or(path)
+            let path = current_dir.join(&config);
+            if let Ok(file) = File::open(&path) {
+                // Provide an easier to read path by keeping it relative if we
+                // are close to the current working directory.
+                let path = if levels_deep <= 4 {
+                    pathdiff::diff_paths(&path, &working_dir).unwrap_or(path)
+                } else {
+                    path.canonicalize()?
+                };
+
+                files.push((
+                    ConfigMeta {
+                        path,
+                        auto_detected: true,
+                        load_config_only,
+                    },
+                    file,
+                ));
             } else {
-                path.canonicalize()?
-            };
-
-            files.push((
-                ConfigMeta {
-                    path,
-                    auto_detected: true,
-                    load_config_only,
-                },
-                file,
-            ));
-        } else {
-            // TODO: Log error about invalid file
+                // TODO: Log error about invalid file
+            }
         }
 
         if let Some(parent) = current_dir.parent() {
@@ -164,7 +173,7 @@ pub fn collect_config_files(
     // $HOME
     if let Some(home_dir_path) = dirs::home_dir() {
         if let Ok(false) = path_already_visited(&visited_paths, &home_dir_path) {
-            visited_paths.push(home_dir_path.clone());
+            visited_paths.push(home_dir_path.clone().canonicalize()?);
 
             let path = home_dir_path.join(&config);
             if let Ok(file) = File::open(&path) {

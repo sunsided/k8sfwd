@@ -11,9 +11,8 @@ use std::path::PathBuf;
 #[command(author, version, about, long_about = None)]
 pub struct Cli {
     /// Sets a custom config file to load instead of .k8sfwd.
-    // TODO: Allow more than file
     #[arg(short = 'f', long = "file", value_name = "FILE", value_parser = config_file_exists)]
-    pub config: Option<PathBuf>,
+    pub config: Vec<PathBuf>,
 
     /// Sets a custom path to the kubectl binary.
     #[arg(
