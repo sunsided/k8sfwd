@@ -22,19 +22,21 @@ Depending on your configuration, you'll be greeted with something along the line
 ██╔═██╗░██╔══██╗░╚═══██╗░██╗░██╔══╝░░░████╔═████║░██║░░██║
 ██║░╚██╗╚█████╔╝██████╔╝░╚═╝░██║░░░░░░╚██╔╝░╚██╔╝░██████╔╝
 ╚═╝░░╚═╝░╚════╝░╚═════╝░░░░░░╚═╝░░░░░░░╚═╝░░░╚═╝░░╚═════╝
-k8s:fwd 0.1.0
+k8s:fwd 0.2.0 - a Kubernetes multi-cluster port forwarder
 Using kubectl version v1.24.12-dispatcher
-Using config from .k8sfwd
+Using config from 2 locations
 
 Forwarding to the following targets:
 #0 Items API (Staging)
    target:  service/foo.test-api
    context: (default)
    cluster: (default)
+   source:  .k8sfwd
 #1 Items API (Production)
    target:  pod/foo-59b58f5d68-6t6bh.test-api
    context: (default)
    cluster: production
+   source:  /home/you/.k8sfwd
 
 Spawning child processes:
 #0: Error from server (NotFound): pods "foo-59b58f5d68-6t6bh" not found
