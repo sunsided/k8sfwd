@@ -31,12 +31,10 @@ Forwarding to the following targets:
    target:  service/foo.test-api
    context: (default)
    cluster: (default)
-   source:  .k8sfwd
 #1 Items API (Production)
    target:  pod/foo-59b58f5d68-6t6bh.test-api
    context: (default)
    cluster: production
-   source:  /home/you/.k8sfwd
 
 Spawning child processes:
 #0: Error from server (NotFound): pods "foo-59b58f5d68-6t6bh" not found
