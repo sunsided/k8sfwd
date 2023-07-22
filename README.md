@@ -2,8 +2,9 @@
 
 A tool for handling port-forwards to multiple services and across multiple clusters.
 
-The setup is currently based on [cargo] until platform-specific binaries can be provided.
-To install the latest version (or update to it), run:
+For Linux (GNU and musl) you can download pre-built binaries from the [Releases](https://github.com/sunsided/k8sfwd/releases)
+page. For other platforms the setup is currently based on [cargo] until platform-specific binaries can be provided.
+To manually build and install the latest version for your system (or update to it), run:
 
 ```shell
 cargo install k8sfwd
