@@ -23,7 +23,7 @@ Depending on your configuration, you'll be greeted with something along the line
 ██╔═██╗░██╔══██╗░╚═══██╗░██╗░██╔══╝░░░████╔═████║░██║░░██║
 ██║░╚██╗╚█████╔╝██████╔╝░╚═╝░██║░░░░░░╚██╔╝░╚██╔╝░██████╔╝
 ╚═╝░░╚═╝░╚════╝░╚═════╝░░░░░░╚═╝░░░░░░░╚═╝░░░╚═╝░░╚═════╝
-k8s:fwd 0.2.0 - a Kubernetes multi-cluster port forwarder
+k8s:fwd 0.3.0 - a Kubernetes multi-cluster port forwarder
 Using kubectl version v1.24.12-dispatcher
 Using config from 2 locations
 
@@ -106,7 +106,7 @@ See [`k8sfwd-example.yaml`](k8sfwd-example.yaml) for an example.
 
 ```yaml
 ---
-version: 0.1.0
+version: 0.2.0
 config:
   # Optional: Number of seconds to wait before attempting to re-establish
   # a broken connection.
