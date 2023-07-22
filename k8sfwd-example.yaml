@@ -1,5 +1,5 @@
 ---
-version: 0.1.0
+version: 0.2.0
 config:
   retry_delay_sec: 5.0                  # Optional: Number of seconds to wait before attempting
                                         # to re-establish a broken connection.
