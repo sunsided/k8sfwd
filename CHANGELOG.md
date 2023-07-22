@@ -15,6 +15,9 @@ This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Multiple config files can now be specified by repeating the `--file` argument.
 - [#8](https://github.com/sunsided/k8sfwd/pull/8):
   Added the `--verbose` command-line option for more detailed information on configuration sources.
+- [#9](https://github.com/sunsided/k8sfwd/pull/9):
+  Added filter command-line arguments that allows to specify a prefix for
+  the loaded targets. Only targets matching the prefix will be forwarded.
 
 ### Changed
 
