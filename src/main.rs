@@ -177,7 +177,8 @@ fn map_and_print_config(
     filters: Vec<TargetFilter>,
 ) -> HashMap<ConfigId, PortForwardConfig> {
     let mut map: HashMap<ConfigId, PortForwardConfig> = HashMap::new();
-    for (id, config) in configs.into_iter().enumerate() {
+    let mut config_index = 0;
+    for config in configs.into_iter() {
         if !tags.is_empty() && !tags.matches_set(&config.tags) {
             continue;
         }
@@ -186,7 +187,9 @@ fn map_and_print_config(
             continue;
         }
 
-        let id = ConfigId::new(id);
+        let id = ConfigId::new(config_index);
+        config_index += 1;
+
         let padding = " ".repeat(id.to_string().len());
 
         if let Some(name) = &config.name {
