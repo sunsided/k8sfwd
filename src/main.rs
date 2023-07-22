@@ -8,6 +8,7 @@ use crate::config::{
     PortForwardConfig, RetryDelay,
 };
 use crate::kubectl::{ChildEvent, Kubectl, RestartPolicy, StreamSource};
+use crate::target_filter::{MatchesAnyFilter, TargetFilter};
 use anyhow::Result;
 use clap::Parser;
 use just_a_tag::{MatchesAnyTagUnion, TagUnion};
@@ -22,6 +23,7 @@ mod banner;
 mod cli;
 mod config;
 mod kubectl;
+mod target_filter;
 
 fn main() -> Result<ExitCode> {
     dotenvy::dotenv().ok();
@@ -129,7 +131,7 @@ fn main() -> Result<ExitCode> {
 
     // Map out the config.
     println!("Forwarding to the following targets:");
-    let map = map_and_print_config(config.targets, cli.tags, cli.verbose);
+    let map = map_and_print_config(config.targets, cli.tags, cli.verbose, cli.filters);
     if map.is_empty() {
         eprintln!("No targets selected.");
         return exitcode(exitcode::OK);
@@ -172,13 +174,16 @@ fn map_and_print_config(
     configs: Vec<PortForwardConfig>,
     tags: Vec<TagUnion>,
     verbose: bool,
+    filters: Vec<TargetFilter>,
 ) -> HashMap<ConfigId, PortForwardConfig> {
     let mut map: HashMap<ConfigId, PortForwardConfig> = HashMap::new();
-    for (id, config) in configs.into_iter().enumerate() {
-        if !tags.is_empty() && !tags.matches_set(&config.tags) {
-            continue;
-        }
 
+    let configs = configs
+        .into_iter()
+        .filter(|config| tags.is_empty() || tags.matches_set(&config.tags))
+        .filter(|config| filters.matches(config));
+
+    for (id, config) in configs.enumerate() {
         let id = ConfigId::new(id);
         let padding = " ".repeat(id.to_string().len());
 

@@ -49,6 +49,22 @@ Spawning child processes:
 
 ## Command-Line Options
 
+### Filters
+
+Targets can be selected through prefix filters specified on the command-line. Only
+targets (and target names) starting with the specified prefixes will be forwarded.
+In the following example, services starting with `foo` and `bar` will be selected:
+
+```shell
+k8sfwd foo bar
+```
+
+Filters can operate in combination with tags as well:
+
+```shell
+k8sfwd -t test foo bar
+```
+
 ### Tags
 
 Targets can be labeled with tags. When `k8sfwd` is started with one or more space-separated
