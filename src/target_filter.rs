@@ -29,14 +29,16 @@ impl MatchesAnyFilter for TargetFilter {
             return true;
         }
 
-        if config.target.starts_with(&self.filter) {
+        let filter = self.filter.to_ascii_lowercase();
+
+        if config.target.to_ascii_lowercase().starts_with(&filter) {
             return true;
         }
 
         // TODO: Add alias property
 
         if let Some(name) = &config.name {
-            if name.starts_with(&self.filter) {
+            if name.to_ascii_lowercase().starts_with(&filter) {
                 return true;
             }
         }
