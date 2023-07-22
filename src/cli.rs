@@ -15,7 +15,7 @@ pub struct Cli {
     #[arg(short = 'f', long = "file", value_name = "FILE", value_parser = config_file_exists)]
     pub config: Vec<PathBuf>,
 
-    /// Provides
+    /// Specifies the prefixes of the target configurations to select.
     #[arg(value_name = "FILTER", num_args = 1.., value_delimiter = ' ', allow_hyphen_values = false)]
     pub filters: Vec<TargetFilter>,
 
