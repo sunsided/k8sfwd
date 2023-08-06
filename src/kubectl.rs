@@ -13,6 +13,11 @@ use std::sync::mpsc::Sender;
 use std::thread::JoinHandle;
 use std::{io, process, thread};
 
+#[cfg(not(windows))]
+const ENV_PATH_SEPARATOR: char = ':';
+#[cfg(windows)]
+const ENV_PATH_SEPARATOR: char = ';';
+
 #[derive(Debug)]
 pub struct Kubectl {
     kubectl: PathBuf,
@@ -177,6 +182,7 @@ impl Kubectl {
 
                 let mut command = Command::new(kubectl.clone());
                 command
+                    .env("PATH", Self::get_env_path(&current_dir))
                     .current_dir(current_dir.clone())
                     .stdout(Stdio::piped())
                     .stderr(Stdio::piped())
@@ -261,6 +267,15 @@ impl Kubectl {
         });
 
         Ok(child_thread)
+    }
+
+    fn get_env_path(current_dir: &PathBuf) -> String {
+        let mut path = std::env::var("PATH").unwrap_or_else(|_| String::new());
+        if !path.is_empty() {
+            path.push(ENV_PATH_SEPARATOR);
+        }
+        path.push_str(&current_dir.display().to_string());
+        path
     }
 
     fn handle_pipe<T: Read + Send + 'static>(

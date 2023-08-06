@@ -3,6 +3,13 @@
 All notable changes to this project will be documented in this file.
 This project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+### Internal
+
+- The code around finding `kubectl` was changed in order to better support the use
+  of the `gke-gcloud-auth-plugin` utility.
+
 ## [0.3.0] - 2023-07-22
 
 ### Added
