@@ -34,7 +34,7 @@ fn main() -> Result<ExitCode> {
     let kubectl_version = match kubectl.version() {
         Ok(version) => version,
         Err(e) => {
-            eprintln!("Failed to locate kubectl: {e}");
+            eprintln!("Unable to run k8sfwd - failed to locate the kubectl binary: {e}");
             return exitcode(exitcode::UNAVAILABLE);
         }
     };
