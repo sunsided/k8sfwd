@@ -6,7 +6,10 @@ use crate::target_filter::TargetFilter;
 use clap::Parser;
 use just_a_tag::TagUnion;
 use std::fs::File;
+use std::ops::Deref;
 use std::path::PathBuf;
+use std::str::FromStr;
+use which::which;
 
 #[derive(Parser)]
 #[command(author, version, about, long_about = None)]
@@ -24,13 +27,8 @@ pub struct Cli {
     pub tags: Vec<TagUnion>,
 
     /// Sets a custom path to the kubectl binary.
-    #[arg(
-        long,
-        value_name = "FILE",
-        env = "KUBECTL_PATH",
-        default_value = "kubectl"
-    )]
-    pub kubectl: PathBuf,
+    #[arg(long, value_name = "FILE", env = "KUBECTL_PATH")]
+    pub kubectl: Option<KubectlPathBuf>,
 
     /// Enables verbose log outputs.
     #[arg(long)]
@@ -45,5 +43,36 @@ fn config_file_exists(s: &str) -> Result<PathBuf, String> {
         Err(format!(
             "The config file `{s}` does not exist or is not a valid file"
         ))
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct KubectlPathBuf(PathBuf);
+
+impl Default for KubectlPathBuf {
+    fn default() -> Self {
+        Self(which("kubectl").unwrap_or(PathBuf::from("kubectl")))
+    }
+}
+
+impl Deref for KubectlPathBuf {
+    type Target = PathBuf;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl Into<PathBuf> for KubectlPathBuf {
+    fn into(self) -> PathBuf {
+        self.0
+    }
+}
+
+impl FromStr for KubectlPathBuf {
+    type Err = core::convert::Infallible;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        Ok(Self(PathBuf::from_str(s)?))
     }
 }

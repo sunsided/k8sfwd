@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: EUPL-1.2
 // SPDX-FileType: SOURCE
 
+use crate::cli::KubectlPathBuf;
 use crate::config::{ConfigId, OperationalConfig, PortForwardConfig, RetryDelay};
 use serde::Deserialize;
 use std::env::current_dir;
@@ -19,7 +20,8 @@ pub struct Kubectl {
 }
 
 impl Kubectl {
-    pub fn new(kubectl: PathBuf) -> Result<Self, ShellError> {
+    pub fn new(kubectl: Option<KubectlPathBuf>) -> Result<Self, ShellError> {
+        let kubectl: PathBuf = kubectl.unwrap_or(KubectlPathBuf::default()).into();
         let path = kubectl
             .parent()
             .map(|p| p.to_path_buf())
