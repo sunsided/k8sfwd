@@ -22,8 +22,16 @@ cargo auditable build --profile=${PROFILE} --target=${TARGET}
 ls -lah target/${TARGET}/${PROFILE}/k8sfwd
 gzip --keep -c target/${TARGET}/${PROFILE}/k8sfwd > "k8sfwd-${PACKAGE_VERSION}-${LINUX_FLAVOR}.gz"
 
-# TODO: Add OSX support
-# echo "Building for Apple Darwin"
-# # rustup target add x86_64-apple-darwin
-# cargo auditable build --profile=${PROFILE} --target=x86_64-apple-darwin
-# ls -lah target/x86_64-apple-darwin/${PROFILE}/k8sfwd
+exit 0
+
+echo "Building for Apple Darwin"
+FLAVOR=apple-darwin
+TARGET=x86_64-${FLAVOR}
+sudo apt install -y gcc-multilib g++-multilib
+rustup target add x86_64-apple-darwin
+export CC=o64-clang
+export CXX=o64-clang++
+cargo auditable build --profile=${PROFILE} --target=${TARGET}
+ls -lah target/${TARGET}/${PROFILE}/k8sfwd
+gzip --keep -c target/${TARGET}/${PROFILE}/k8sfwd > "k8sfwd-${PACKAGE_VERSION}-${FLAVOR}.gz"
+
