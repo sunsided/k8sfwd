@@ -20,9 +20,13 @@ pub struct Kubectl {
 
 impl Kubectl {
     pub fn new(kubectl: PathBuf) -> Result<Self, ShellError> {
+        let path = kubectl
+            .parent()
+            .map(|p| p.to_path_buf())
+            .unwrap_or(current_dir()?);
         Ok(Self {
             kubectl,
-            current_dir: current_dir()?,
+            current_dir: path.to_path_buf(),
         })
     }
 
