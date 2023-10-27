@@ -254,6 +254,13 @@ impl Kubectl {
                         match status.code().unwrap() {
                             1 => {
                                 // Kill the process if the exit code is 1
+                                out_tx
+                                    .send(ChildEvent::Exit(
+                                        id,
+                                        status,
+                                        RestartPolicy::WillRestartIn(RetryDelay::NEVER)
+                                    ))
+                                    .ok();
                                 break 'new_process Err(anyhow!("Command returned status code 1"));
                             }
                             _ => {}
