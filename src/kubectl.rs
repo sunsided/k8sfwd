@@ -13,7 +13,6 @@ use std::process::{Command, ExitStatus, Stdio};
 use std::sync::mpsc::Sender;
 use std::thread::JoinHandle;
 use std::{io, process, thread};
-use anyhow::Error;
 
 #[cfg(not(windows))]
 const ENV_PATH_SEPARATOR: char = ':';
