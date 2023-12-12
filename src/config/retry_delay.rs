@@ -11,7 +11,6 @@ pub struct RetryDelay(f64);
 
 impl RetryDelay {
     pub const NONE: RetryDelay = RetryDelay(0.0);
-    pub const NEVER: RetryDelay = RetryDelay(-1.0);
 
     pub fn from_secs(delay: f64) -> Self {
         Self(delay.max(0.0))

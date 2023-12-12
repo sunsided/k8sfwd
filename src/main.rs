@@ -256,12 +256,13 @@ fn start_output_loop_thread(out_rx: Receiver<ChildEvent>) -> JoinHandle<()> {
                                     "{id}: Process exited with {} - retrying immediately",
                                     status
                                 );
-                            } else {
-                                eprintln!(
-                                    "{id}: Process exited with {} - shutting process down",
-                                    status
-                                );
                             }
+                        }
+                        RestartPolicy::None => {
+                            eprintln!(
+                                "{id}: Process exited with {} - shutting process down",
+                                status
+                            );
                         }
                     }
                 }

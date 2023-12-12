@@ -254,11 +254,7 @@ impl Kubectl {
                             1 => {
                                 // Kill the process if the exit code is 1
                                 out_tx
-                                    .send(ChildEvent::Exit(
-                                        id,
-                                        status,
-                                        RestartPolicy::WillRestartIn(RetryDelay::NEVER)
-                                    ))
+                                    .send(ChildEvent::Exit(id, status, RestartPolicy::None))
                                     .ok();
                                 break 'new_process Err(anyhow!("Command returned status code 1"));
                             }
@@ -327,6 +323,7 @@ pub enum ChildEvent {
 #[derive(Debug)]
 pub enum RestartPolicy {
     WillRestartIn(RetryDelay),
+    None,
 }
 
 #[derive(Debug, thiserror::Error)]
