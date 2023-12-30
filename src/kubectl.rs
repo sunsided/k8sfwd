@@ -7,7 +7,7 @@ use crate::config::{ConfigId, OperationalConfig, PortForwardConfig, RetryDelay};
 use serde::Deserialize;
 use std::env::current_dir;
 use std::io::{BufRead, Read};
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
 use std::sync::mpsc::Sender;
 use std::thread::JoinHandle;
@@ -26,7 +26,7 @@ pub struct Kubectl {
 
 impl Kubectl {
     pub fn new(kubectl: Option<KubectlPathBuf>) -> Result<Self, ShellError> {
-        let kubectl: PathBuf = kubectl.unwrap_or(KubectlPathBuf::default()).into();
+        let kubectl: PathBuf = kubectl.unwrap_or_default().into();
         let path = kubectl
             .parent()
             .map(|p| p.to_path_buf())
@@ -162,7 +162,7 @@ impl Kubectl {
     ) -> Result<JoinHandle<Result<(), anyhow::Error>>, VersionError> {
         let target = format!(
             "{resource}/{name}",
-            resource = fwd_config.r#type.to_arg(),
+            resource = fwd_config.r#type.as_arg(),
             name = fwd_config.target
         );
 
@@ -269,7 +269,7 @@ impl Kubectl {
         Ok(child_thread)
     }
 
-    fn get_env_path(current_dir: &PathBuf) -> String {
+    fn get_env_path(current_dir: &Path) -> String {
         let mut path = std::env::var("PATH").unwrap_or_else(|_| String::new());
         if !path.is_empty() {
             path.push(ENV_PATH_SEPARATOR);

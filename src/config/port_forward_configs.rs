@@ -90,11 +90,7 @@ impl IntoIterator for PortForwardConfigs {
 impl PortForwardConfigs {
     pub fn is_supported_version(&self) -> bool {
         #[allow(clippy::absurd_extreme_comparisons)]
-        if self.version < *LOWEST_SUPPORTED_VERSION || self.version > *HIGHEST_SUPPORTED_VERSION {
-            false
-        } else {
-            true
-        }
+        !(self.version < *LOWEST_SUPPORTED_VERSION || self.version > *HIGHEST_SUPPORTED_VERSION)
     }
 }
 

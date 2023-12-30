@@ -4,7 +4,7 @@
 
 use std::fmt::{Display, Formatter};
 
-static BANNER: &'static str = indoc::indoc!(
+static BANNER: &str = indoc::indoc!(
     r#"
     ██╗░░██╗░█████╗░░██████╗░░░░░███████╗██╗░░░░░░░██╗██████╗
     ██║░██╔╝██╔══██╗██╔════╝░██╗░██╔════╝██║░░██╗░░██║██╔══██╗

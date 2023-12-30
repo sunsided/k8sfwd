@@ -24,7 +24,7 @@ impl MergeWith for Vec<Port> {
 
         let set: HashSet<Port> = HashSet::from_iter(self.iter().cloned());
         let other_set = HashSet::from_iter(other.iter().cloned());
-        *self = Vec::from_iter(&mut set.union(&other_set).into_iter().cloned());
+        *self = Vec::from_iter(&mut set.union(&other_set).cloned());
     }
 }
 

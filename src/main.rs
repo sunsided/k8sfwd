@@ -191,14 +191,14 @@ fn map_and_print_config(
             println!("{id} {name}");
             println!(
                 "{padding} target:  {resource}/{name}.{namespace}",
-                resource = config.r#type.to_arg(),
+                resource = config.r#type.as_arg(),
                 name = config.target,
                 namespace = config.namespace
             );
         } else {
             println!(
                 "{id} target:  {resource}/{name}.{namespace}",
-                resource = config.r#type.to_arg(),
+                resource = config.r#type.as_arg(),
                 name = config.target,
                 namespace = config.namespace
             );
@@ -232,7 +232,7 @@ fn map_and_print_config(
 }
 
 fn start_output_loop_thread(out_rx: Receiver<ChildEvent>) -> JoinHandle<()> {
-    let print_thread = thread::spawn(move || {
+    thread::spawn(move || {
         while let Ok(event) = out_rx.recv() {
             match event {
                 ChildEvent::Output(id, channel, message) => {
@@ -266,8 +266,7 @@ fn start_output_loop_thread(out_rx: Receiver<ChildEvent>) -> JoinHandle<()> {
                 }
             }
         }
-    });
-    print_thread
+    })
 }
 
 fn exitcode(code: exitcode::ExitCode) -> Result<ExitCode, anyhow::Error> {

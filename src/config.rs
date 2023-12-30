@@ -34,7 +34,7 @@ lazy_static! {
     pub static ref HIGHEST_SUPPORTED_VERSION: Version = Version::new(0, 3, 0);
 }
 
-pub static DEFAULT_CONFIG_FILE: &'static str = ".k8sfwd";
+pub static DEFAULT_CONFIG_FILE: &str = ".k8sfwd";
 
 /// Describes the source and handling of a configuration.
 #[derive(Debug)]
@@ -73,19 +73,19 @@ pub fn sanitize_config(
 fn autofill_context_and_cluster(
     config: &mut PortForwardConfig,
     kubectl: &Kubectl,
-    current_context: &String,
+    current_context: &str,
     current_cluster: &Option<String>,
 ) {
     match (&mut config.context, &mut config.cluster) {
         (Some(_context), Some(_cluster)) => { /* nothing to do */ }
-        (Some(context), None) => match kubectl.cluster_from_context(Some(&context)) {
+        (Some(context), None) => match kubectl.cluster_from_context(Some(context)) {
             Ok(Some(cluster)) => {
                 config.cluster = Some(cluster);
             }
             Ok(None) => {}
             Err(_) => {}
         },
-        (None, Some(cluster)) => match kubectl.context_from_cluster(Some(&cluster)) {
+        (None, Some(cluster)) => match kubectl.context_from_cluster(Some(cluster)) {
             Ok(Some(context)) => {
                 config.context = Some(context);
             }
@@ -93,7 +93,7 @@ fn autofill_context_and_cluster(
             Err(_) => {}
         },
         (None, None) => {
-            config.context = Some(current_context.clone());
+            config.context = Some(current_context.to_owned());
             config.cluster = current_cluster.clone();
         }
     }
@@ -211,7 +211,7 @@ fn handle_special_path(
     };
 
     if !visited_paths.track_directory(&path)? {
-        let path = path.join(&config);
+        let path = path.join(config);
         if let Ok(file) = File::open(&path) {
             files.push((
                 ConfigMeta {

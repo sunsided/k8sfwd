@@ -37,7 +37,7 @@ pub struct Cli {
 
 fn config_file_exists(s: &str) -> Result<PathBuf, String> {
     let path = PathBuf::from(s);
-    if let Ok(_) = File::open(&path) {
+    if File::open(&path).is_ok() {
         Ok(path)
     } else {
         Err(format!(
@@ -63,9 +63,9 @@ impl Deref for KubectlPathBuf {
     }
 }
 
-impl Into<PathBuf> for KubectlPathBuf {
-    fn into(self) -> PathBuf {
-        self.0
+impl From<KubectlPathBuf> for PathBuf {
+    fn from(val: KubectlPathBuf) -> Self {
+        val.0
     }
 }
 

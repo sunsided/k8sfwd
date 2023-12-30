@@ -56,7 +56,7 @@ impl MergeWith for PortForwardConfig {
         self.cluster.merge_with(&other.cluster);
         self.merge_listen_addrs(&other.listen_addrs);
         self.namespace = other.namespace.clone();
-        self.r#type = other.r#type.clone();
+        self.r#type = other.r#type;
         self.target = other.target.clone();
         self.ports.merge_with(&other.ports);
     }
@@ -77,11 +77,11 @@ impl MergeWith for Vec<PortForwardConfig> {
 
         for cfg in other {
             map.entry(cfg.target.clone())
-                .and_modify(|current| current.merge_with(&cfg))
+                .and_modify(|current| current.merge_with(cfg))
                 .or_insert(cfg.clone());
         }
 
-        *self = Vec::from_iter(map.into_iter().map(|(_k, v)| v));
+        *self = Vec::from_iter(map.into_values());
     }
 }
 
@@ -93,7 +93,7 @@ impl PortForwardConfig {
     fn merge_listen_addrs(&mut self, other: &[String]) {
         let set: HashSet<String> = HashSet::from_iter(self.listen_addrs.drain(0..));
         let other_set = HashSet::from_iter(other.iter().cloned());
-        self.listen_addrs = Vec::from_iter(&mut set.union(&other_set).into_iter().cloned());
+        self.listen_addrs = Vec::from_iter(&mut set.union(&other_set).cloned());
     }
 }
 

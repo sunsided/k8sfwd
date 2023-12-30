@@ -23,9 +23,9 @@ impl Default for RetryDelay {
     }
 }
 
-impl Into<Duration> for RetryDelay {
-    fn into(self) -> Duration {
-        Duration::from_secs_f64(self.0)
+impl From<RetryDelay> for Duration {
+    fn from(val: RetryDelay) -> Self {
+        Duration::from_secs_f64(val.0)
     }
 }
 

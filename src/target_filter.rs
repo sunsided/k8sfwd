@@ -58,7 +58,7 @@ where
         }
 
         for filter in this {
-            if filter.matches(&config) {
+            if filter.matches(config) {
                 return true;
             }
         }

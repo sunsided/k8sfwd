@@ -22,7 +22,7 @@ impl Default for ResourceType {
 }
 
 impl ResourceType {
-    pub fn to_arg(&self) -> &'static str {
+    pub fn as_arg(&self) -> &'static str {
         match self {
             ResourceType::Service => "service",
             ResourceType::Deployment => "deployment",
