@@ -25,7 +25,7 @@ jobs:
       - run: exit 0
 
   style:
-    name: Check Style
+    name: Check Formatting and Style
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -81,7 +81,9 @@ jobs:
         run: cargo test ${{ matrix.features }}
 
   udeps:
-    needs: [style]
+    name: Detect unused dependencies
+    needs:
+      - style
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
