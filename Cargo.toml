@@ -12,22 +12,22 @@ license = "EUPL-1.2"
 edition = "2021"
 
 [dependencies]
-anyhow = "1.0.72"
-clap = { version = "4.3.19", features = ["derive", "env"] }
+anyhow = "1.0.77"
+clap = { version = "4.4.12", features = ["derive", "env"] }
 dirs = "5.0.1"
 dotenvy = "0.15.7"
 exitcode = "1.1.2"
-indoc = "2.0.3"
+indoc = "2.0.4"
 just-a-tag = { version = "0.1.1", features = ["serde"] }
 lazy_static = "1.4.0"
 pathdiff = "0.2.1"
 same-file = "1.0.6"
-semver = { version = "1.0.18", features = ["serde"] }
-serde = { version = "1.0.174", features = ["derive"] }
-serde_json = "1.0.103"
-serde_yaml = "0.9.25"
-thiserror = "1.0.44"
-which = "4.4.0"
+semver = { version = "1.0.20", features = ["serde"] }
+serde = { version = "1.0.193", features = ["derive"] }
+serde_json = "1.0.108"
+serde_yaml = "0.9.29"
+thiserror = "1.0.52"
+which = "4.4.2"
 
 [profile.release]
 strip = "debuginfo"
