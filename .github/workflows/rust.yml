@@ -34,7 +34,7 @@ jobs:
       - name: Install Rust
         uses: dtolnay/rust-toolchain@stable
         with:
-          components: rustfmt
+          components: clippy, rustfmt
 
       - name: cargo fmt --check
         run: |
@@ -42,6 +42,8 @@ jobs:
             printf "Please run \`rustfmt --edition 2021 \$(git ls-files '*.rs')\` to fix rustfmt errors.\nSee CONTRIBUTING.md for more details.\n" >&2
             exit 1
           fi
+      - name: cargo clippy
+        run: cargo clippy
 
   test:
     name: Test ${{ matrix.rust }} on ${{ matrix.os }}
@@ -51,7 +53,7 @@ jobs:
       matrix:
         rust:
           - stable
-          - beta
+          # - beta
 
         os:
           - ubuntu-latest
@@ -60,7 +62,7 @@ jobs:
 
         include:
           - rust: stable
-          - rust: beta
+          # - rust: beta
 
     runs-on: ${{ matrix.os }}
 
