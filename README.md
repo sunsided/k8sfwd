@@ -134,4 +134,24 @@ targets:
       - "5012:80"
 ```
 
+## FlatHub
+
+You can run the application from FlatPak using
+
+```shell
+flatpak run com.github.sunsided.k8sfwd
+```
+
+When installed through FlatHub, the application may not find the `kubectl` binary
+depending on how it was installed on your system. In this case, ensure to export the `KUBECTL_PATH`
+environment variable, pointing it to the correct path:
+
+```shell
+export KUBECTL_PATH=...
+```
+
+After this, you may run into issues with `gke-gcloud-auth-plugin`.
+See [kubectl auth changes in GKE](https://cloud.google.com/blog/products/containers-kubernetes/kubectl-auth-changes-in-gke?hl=en)
+for more information.
+
 [cargo]: https://crates.io/
