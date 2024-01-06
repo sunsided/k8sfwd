@@ -1,0 +1,96 @@
+# Deploys crashie to test crashing pods.
+# See https://github.com/sunsided/crashie
+#
+# ```
+# kubectl --context kind-k8sfwd apply -f kind/crashie.yaml
+# watch "kubectl get pods --context kind-k8sfwd"
+# ```
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: crashie
+spec:
+  type: NodePort
+  selector:
+    app: crashie
+  ports:
+    - name: http
+      port: 80
+      targetPort: 80
+      protocol: TCP
+    - name: tcp
+      port: 30000
+      targetPort: 30000
+      protocol: TCP
+    - name: udp
+      port: 40000
+      targetPort: 40000
+      protocol: UDP
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crashie
+spec:
+  selector:
+    matchLabels:
+      app: crashie
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        app: crashie
+    spec:
+      containers:
+        - name: crashie
+          image: sunside/crashie
+          env:
+            - name: CRASHIE_BIND_HTTP_ECHO
+              value: "0.0.0.0:80"
+            - name: CRASHIE_BIND_TCP_ECHO
+              value: "0.0.0.0:30000"
+            - name: CRASHIE_BIND_UDP_ECHO
+              value: "0.0.0.0:40000"
+            - name: CRASHIE_HTTP_LIVENESS_PROBE_PATH
+              value: "/health/live"
+            - name: CRASHIE_SLEEP_DELAY
+              value: "30"
+            - name: CRASHIE_SLEEP_DELAY_STDDEV
+              value: "30"
+          startupProbe:
+            httpGet:
+              path: /health/live
+              port: 80
+            initialDelaySeconds: 1
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 1
+            successThreshold: 1
+          readinessProbe:
+            httpGet:
+              path: /health/live
+              port: 80
+            initialDelaySeconds: 0
+            periodSeconds: 1
+            timeoutSeconds: 1
+            failureThreshold: 1
+            successThreshold: 1
+          livenessProbe:
+            httpGet:
+              path: /health/live
+              port: 80
+            initialDelaySeconds: 2
+            timeoutSeconds: 1
+            successThreshold: 1
+            failureThreshold: 1
+          ports:
+            - name: http
+              containerPort: 80
+              protocol: TCP
+            - name: tcp
+              containerPort: 30000
+              protocol: TCP
+            - name: udp
+              containerPort: 40000
+              protocol: UDP

@@ -1,0 +1,11 @@
+# A kind cluster to test pod restarts
+# See https://kind.sigs.k8s.io/
+#
+# kind create cluster --config ./kind/kind-config.yaml
+# kubectl cluster-info --context kind-k8sfwd
+---
+kind: Cluster
+apiVersion: kind.x-k8s.io/v1alpha4
+name: k8sfwd
+nodes:
+  - role: control-plane
