@@ -44,7 +44,7 @@ spec:
     spec:
       containers:
         - name: crashie
-          image: sunside/crashie
+          image: sunside/crashie:0.4.0
           env:
             - name: CRASHIE_BIND_HTTP_ECHO
               value: "0.0.0.0:80"
@@ -54,8 +54,10 @@ spec:
               value: "0.0.0.0:40000"
             - name: CRASHIE_HTTP_LIVENESS_PROBE_PATH
               value: "/health/live"
+            - name: CRASHIE_SLEEP_DELAY_GRACE_PERIOD
+              value: "5"
             - name: CRASHIE_SLEEP_DELAY
-              value: "30"
+              value: "40"
             - name: CRASHIE_SLEEP_DELAY_STDDEV
               value: "30"
           startupProbe:
@@ -65,13 +67,12 @@ spec:
             initialDelaySeconds: 1
             periodSeconds: 1
             timeoutSeconds: 1
-            failureThreshold: 1
             successThreshold: 1
           readinessProbe:
             httpGet:
               path: /health/live
               port: 80
-            initialDelaySeconds: 0
+            initialDelaySeconds: 2
             periodSeconds: 1
             timeoutSeconds: 1
             failureThreshold: 1
