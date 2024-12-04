@@ -238,8 +238,8 @@ fn start_output_loop_thread(out_rx: Receiver<ChildEvent>) -> JoinHandle<()> {
                 ChildEvent::Output(id, channel, message) => {
                     // TODO: use display name
                     match channel {
-                        StreamSource::StdOut => println!("{id}: {message}"),
-                        StreamSource::StdErr => eprintln!("{id}: {message}"),
+                        StreamSource::StdOut => println!("{id}: kubectl: {message}"),
+                        StreamSource::StdErr => eprintln!("{id}: kubectl: {message}"),
                     }
                 }
                 ChildEvent::Exit(id, status, policy) => {
