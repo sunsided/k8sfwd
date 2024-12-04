@@ -4,6 +4,7 @@
 
 use crate::cli::KubectlPathBuf;
 use crate::config::{ConfigId, OperationalConfig, PortForwardConfig, RetryDelay};
+use anyhow::anyhow;
 use serde::Deserialize;
 use std::env::current_dir;
 use std::io::{BufRead, Read};
@@ -248,11 +249,23 @@ impl Kubectl {
                 // Wait for the child process to finish
                 let status = child.wait();
                 let status = match status {
-                    Ok(status) => status,
+                    Ok(status) => {
+                        match status.code().unwrap() {
+                            1 => {
+                                // Kill the process if the exit code is 1
+                                out_tx
+                                    .send(ChildEvent::Exit(id, status, RestartPolicy::None))
+                                    .ok();
+                                break 'new_process Err(anyhow!("Command returned status code 1"));
+                            }
+                            _ => {}
+                        };
+                        status
+                    }
                     Err(e) => {
                         out_tx.send(ChildEvent::Error(id, ChildError::Wait(e))).ok();
-                        // TODO: Break out of this loop if the error is unfixable?
                         continue 'new_process;
+                        // TODO: Break out of this loop if the error is unfixable?
                     }
                 };
 
@@ -310,6 +323,7 @@ pub enum ChildEvent {
 #[derive(Debug)]
 pub enum RestartPolicy {
     WillRestartIn(RetryDelay),
+    None,
 }
 
 #[derive(Debug, thiserror::Error)]
