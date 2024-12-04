@@ -1,0 +1,4 @@
+/.flatpak-builder
+/build
+/cargo-sources.json
+/repo
