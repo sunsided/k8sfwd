@@ -251,12 +251,18 @@ fn start_output_loop_thread(out_rx: Receiver<ChildEvent>) -> JoinHandle<()> {
                                     "{id}: Process exited with {} - will retry in {}",
                                     status, delay
                                 );
-                            } else {
+                            } else if delay == RetryDelay::NONE {
                                 eprintln!(
                                     "{id}: Process exited with {} - retrying immediately",
                                     status
                                 );
                             }
+                        }
+                        RestartPolicy::None => {
+                            eprintln!(
+                                "{id}: Process exited with {} - shutting process down",
+                                status
+                            );
                         }
                     }
                 }
