@@ -5,12 +5,15 @@
 use crate::cli::KubectlPathBuf;
 use crate::config::{ConfigId, OperationalConfig, PortForwardConfig, RetryDelay};
 use serde::Deserialize;
+use socket2::{Domain, Protocol, SockAddr, Socket, Type};
 use std::env::current_dir;
 use std::io::{BufRead, Read};
+use std::net::{SocketAddr, TcpListener, TcpStream, ToSocketAddrs};
 use std::path::{Path, PathBuf};
 use std::process::{Command, ExitStatus, Stdio};
 use std::sync::mpsc::Sender;
 use std::thread::JoinHandle;
+use std::time::Duration;
 use std::{io, process, thread};
 
 #[cfg(not(windows))]
@@ -242,6 +245,44 @@ impl Kubectl {
                     child.stderr.take(),
                     StreamSource::StdErr,
                 );
+
+                // TODO: Add TCP keepalive for each port!
+                let port = fwd_config.ports[0];
+                let keepalive = thread::spawn(move || {
+                    // TODO: Use fwd_config.listen_addrs to bind.
+                    let port = port.local.unwrap_or(port.remote);
+                    let mut addrs = format!("127.0.0.1:{port}")
+                        .to_socket_addrs()
+                        .expect("Failed to parse socket addresses");
+                    let addr = addrs.next().expect("Failed to obtain socket address");
+                    let addr = SockAddr::from(addr);
+                    let stream = match Socket::new(Domain::IPV4, Type::STREAM, Some(Protocol::TCP))
+                    {
+                        Ok(socket) => {
+                            socket.set_nodelay(true).expect("Failed to set TCP_NODELAY");
+                            socket
+                                .set_keepalive(true)
+                                .expect("Failed to set SO_KEEPALIVE");
+                            // TODO: stream.set_tcp_keepalive() ?
+                            socket
+                                .connect(&addr)
+                                .expect("Failed to connect to socket address");
+                            TcpStream::from(socket)
+                        }
+                        Err(_e) => {
+                            return;
+                        }
+                    };
+
+                    // TODO: Do something with the stream ... or not.
+                    loop {
+                        if let Ok(Some(e)) = stream.take_error() {
+                            eprintln!("Error on TCP keepalive stream: {e}");
+                            return;
+                        }
+                        thread::sleep(Duration::from_secs(10));
+                    }
+                });
 
                 let mut child = ChildGuard(child);
 
